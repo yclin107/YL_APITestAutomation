@@ -82,11 +82,31 @@ namespace APITestAutomation.Services.OpenAPI
                         OperationId = operation.Value.OperationId ?? GenerateOperationId(operation.Key.ToString(), path.Key),
                         Summary = operation.Value.Summary ?? string.Empty,
                         Description = operation.Value.Description ?? string.Empty,
-                        Parameters = operation.Value.Parameters?.ToList() ?? new List<OpenApiParameter>(),
-                        Responses = operation.Value.Responses ?? new Dictionary<string, OpenApiResponse>(),
-                        RequestBody = operation.Value.RequestBody,
+                        Parameters = operation.Value.Parameters?.Select(p => new OpenApiParameter
+                        {
+                            Name = p.Name,
+                            In = p.In,
+                            Required = p.Required,
+                            Schema = p.Schema != null ? new OpenApiSchema 
+                            { 
+                                Type = p.Schema.Type,
+                                Format = p.Schema.Format
+                            } : null
+                        }).ToList() ?? new List<OpenApiParameter>(),
+                        Responses = operation.Value.Responses?.ToDictionary(
+                            r => r.Key, 
+                            r => new OpenApiResponse 
+                            { 
+                                Description = r.Value.Description 
+                            }) ?? new Dictionary<string, OpenApiResponse>(),
+                        RequestBody = operation.Value.RequestBody != null ? new OpenApiRequestBody
+                        {
+                            Required = operation.Value.RequestBody.Required,
+                            Description = operation.Value.RequestBody.Description
+                        } : null,
                         Tags = operation.Value.Tags?.Select(t => t.Name).ToList() ?? new List<string>(),
-                        RequiresAuth = operation.Value.Security?.Any() == true
+                        RequiresAuth = operation.Value.Security?.Any() == true,
+                        SecuritySchemes = new Dictionary<string, OpenApiSecurityScheme>()
                     };
 
                     endpointTests[key] = endpointTest;

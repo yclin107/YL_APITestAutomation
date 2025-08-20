@@ -1,5 +1,6 @@
 using APITestAutomation.Models.OpenAPI;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace APITestAutomation.Services.OpenAPI
 {
@@ -24,9 +25,30 @@ namespace APITestAutomation.Services.OpenAPI
         {
             var spec = await OpenApiSpecReader.ReadSpecificationAsync(specPath, baseUrl);
             
-            // Save current spec for future comparisons
+            // Save current spec for future comparisons (without the full OpenAPI document to avoid cycles)
             var configFile = Path.Combine(_configPath, "current-spec.json");
-            var json = JsonSerializer.Serialize(spec, new JsonSerializerOptions { WriteIndented = true });
+            var specForSerialization = new OpenApiTestSpecForSerialization
+            {
+                SpecificationPath = spec.SpecificationPath,
+                BaseUrl = spec.BaseUrl,
+                LastModified = spec.LastModified,
+                Version = spec.Version,
+                EndpointTests = spec.EndpointTests,
+                DocumentInfo = new OpenApiDocumentInfo
+                {
+                    Title = spec.Document.Info?.Title ?? "Unknown",
+                    Version = spec.Document.Info?.Version ?? "1.0.0",
+                    Description = spec.Document.Info?.Description ?? ""
+                }
+            };
+            
+            var jsonOptions = new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+            var json = JsonSerializer.Serialize(specForSerialization, jsonOptions);
             await File.WriteAllTextAsync(configFile, json);
             
             return spec;
@@ -50,10 +72,25 @@ namespace APITestAutomation.Services.OpenAPI
             }
 
             var oldSpecJson = await File.ReadAllTextAsync(configFile);
-            var oldSpec = JsonSerializer.Deserialize<OpenApiTestSpec>(oldSpecJson);
+            var jsonOptions = new JsonSerializerOptions 
+            { 
+                PropertyNameCaseInsensitive = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles
+            };
+            var oldSpecSerialized = JsonSerializer.Deserialize<OpenApiTestSpecForSerialization>(oldSpecJson, jsonOptions);
             
-            if (oldSpec == null)
+            if (oldSpecSerialized == null)
                 throw new InvalidOperationException("Could not deserialize previous specification");
+
+            // Convert back to OpenApiTestSpec for comparison
+            var oldSpec = new OpenApiTestSpec
+            {
+                SpecificationPath = oldSpecSerialized.SpecificationPath,
+                BaseUrl = oldSpecSerialized.BaseUrl,
+                LastModified = oldSpecSerialized.LastModified,
+                Version = oldSpecSerialized.Version,
+                EndpointTests = oldSpecSerialized.EndpointTests
+            };
 
             return TestChangeDetector.DetectChanges(oldSpec, newSpec);
         }
@@ -79,7 +116,28 @@ namespace APITestAutomation.Services.OpenAPI
             
             // Update current spec
             var configFile = Path.Combine(_configPath, "current-spec.json");
-            var json = JsonSerializer.Serialize(spec, new JsonSerializerOptions { WriteIndented = true });
+            var specForSerialization = new OpenApiTestSpecForSerialization
+            {
+                SpecificationPath = spec.SpecificationPath,
+                BaseUrl = spec.BaseUrl,
+                LastModified = spec.LastModified,
+                Version = spec.Version,
+                EndpointTests = spec.EndpointTests,
+                DocumentInfo = new OpenApiDocumentInfo
+                {
+                    Title = spec.Document.Info?.Title ?? "Unknown",
+                    Version = spec.Document.Info?.Version ?? "1.0.0",
+                    Description = spec.Document.Info?.Description ?? ""
+                }
+            };
+            
+            var jsonOptions = new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+            var json = JsonSerializer.Serialize(specForSerialization, jsonOptions);
             await File.WriteAllTextAsync(configFile, json);
             
             return $"Tests generated successfully at: {filePath}";
@@ -106,10 +164,33 @@ namespace APITestAutomation.Services.OpenAPI
                 )
             };
             
-            var json = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+            var jsonOptions = new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                ReferenceHandler = ReferenceHandler.IgnoreCycles
+            };
+            var json = JsonSerializer.Serialize(report, jsonOptions);
             await File.WriteAllTextAsync(reportPath, json);
             
             return reportPath;
+        }
+
+        // Helper classes for serialization without circular references
+        private class OpenApiTestSpecForSerialization
+        {
+            public string SpecificationPath { get; set; } = string.Empty;
+            public string BaseUrl { get; set; } = string.Empty;
+            public DateTime LastModified { get; set; }
+            public string Version { get; set; } = string.Empty;
+            public Dictionary<string, OpenApiEndpointTest> EndpointTests { get; set; } = new();
+            public OpenApiDocumentInfo DocumentInfo { get; set; } = new();
+        }
+
+        private class OpenApiDocumentInfo
+        {
+            public string Title { get; set; } = string.Empty;
+            public string Version { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
         }
 
         private string GeneratePreview(OpenApiTestSpec spec)
