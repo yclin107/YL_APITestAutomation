@@ -110,6 +110,11 @@ namespace APITestAutomation.Services.OpenAPI
                 {
                     sb.AppendLine($"                    .Header(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
                 }
+                else if (param.In == ParameterLocation.Path)
+                {
+                    // Path parameters are handled in the URL template
+                    // We'll replace them in the URL
+                }
             }
             
             // Add request body if needed
@@ -118,8 +123,15 @@ namespace APITestAutomation.Services.OpenAPI
                 sb.AppendLine("                    .Body(GenerateTestRequestBody())");
             }
             
+            // Handle path parameters in URL
+            var urlPath = endpoint.Path;
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
+            {
+                urlPath = urlPath.Replace($"{{{param.Name}}}", $"{{GetTestValue(\"{param.Schema?.Type ?? "string"}\")}}");
+            }
+            
             sb.AppendLine("                    .When()");
-            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{endpoint.Path}\")");
+            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{urlPath}\")");
             sb.AppendLine("                    .Then()");
             
             // Add expected status codes
@@ -156,7 +168,15 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine("            {");
             sb.AppendLine("                return Given()");
             sb.AppendLine("                    .When()");
-            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{endpoint.Path}\")");
+            
+            // Handle path parameters in URL for unauthorized test
+            var urlPath = endpoint.Path;
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
+            {
+                urlPath = urlPath.Replace($"{{{param.Name}}}", $"{{GetTestValue(\"{param.Schema?.Type ?? "string"}\")}}");
+            }
+            
+            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{urlPath}\")");
             sb.AppendLine("                    .Then()");
             sb.AppendLine("                    .StatusCode(401);");
             sb.AppendLine("            });");
@@ -192,7 +212,15 @@ namespace APITestAutomation.Services.OpenAPI
             }
             
             sb.AppendLine("                    .When()");
-            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{endpoint.Path}\")");
+            
+            // Handle path parameters in URL for missing parameters test
+            var urlPath = endpoint.Path;
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
+            {
+                urlPath = urlPath.Replace($"{{{param.Name}}}", $"{{GetTestValue(\"{param.Schema?.Type ?? "string"}\")}}");
+            }
+            
+            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{urlPath}\")");
             sb.AppendLine("                    .Then()");
             sb.AppendLine("                    .StatusCode(400);");
             sb.AppendLine("            });");
@@ -245,8 +273,15 @@ namespace APITestAutomation.Services.OpenAPI
                 sb.AppendLine("                    .Body(GenerateTestRequestBody())");
             }
             
+            // Handle path parameters in URL for schema validation test
+            var urlPath = endpoint.Path;
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
+            {
+                urlPath = urlPath.Replace($"{{{param.Name}}}", $"{{GetTestValue(\"{param.Schema?.Type ?? "string"}\")}}");
+            }
+            
             sb.AppendLine("                    .When()");
-            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{endpoint.Path}\")");
+            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{urlPath}\")");
             sb.AppendLine("                    .Then();");
             sb.AppendLine("            });");
             sb.AppendLine();
@@ -280,6 +315,9 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine("                \"number\" => 123.45,");
             sb.AppendLine("                \"boolean\" => true,");
             sb.AppendLine("                \"array\" => new[] { \"test\" },");
+            sb.AppendLine("                \"uuid\" => Guid.NewGuid().ToString(),");
+            sb.AppendLine("                \"date\" => DateTime.Now.ToString(\"yyyy-MM-dd\"),");
+            sb.AppendLine("                \"date-time\" => DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\"),");
             sb.AppendLine("                _ => \"test-value\"");
             sb.AppendLine("            };");
             sb.AppendLine("        }");
