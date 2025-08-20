@@ -1,0 +1,12 @@
+{
+  "Elite3EClientId": "b1f2a07e-810a-4805-8108-67348c9dce76",
+  "PPSClientId": "0780b432-ae27-4e54-afc4-880570abcebd",
+  "Elite3EApiUrl": "https://3e.nonprod.elite.com/api/test/3e/ui/v1/instance/q7v1n2oexe2yohe1ttb9yq/",
+  "ProformaApiUrl": "https://proforma.nonprod.elite.com/api/test/3e/proforma/v1",
+  "OAuthScope": "https://management.core.windows.net/.default",
+  "TenantId": "b2c44778-9710-436c-a075-9bcc06e79a1b",
+  "RedirectUri": "http://localhost:8686/sampleapp/auth",
+  "AuthorizationEndpoint": "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize",
+  "TokenEndpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+  "ClientId": "c6f47024-bb8b-4cd5-8f8c-8cead2f2476f"
+}

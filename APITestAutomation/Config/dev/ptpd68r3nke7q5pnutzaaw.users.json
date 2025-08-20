@@ -1,0 +1,28 @@
+{
+  "Users": {
+    "PPSAutoTestUser0": {
+      "LoginId": "PPSAutoTestUser0@h3esharksdev01.onmicrosoft.com",
+      "FirstName": "AutoTestUser0",
+      "LastName": "PPS",
+      "PasswordEnvVar": "PTPD_AUTO",
+      "DefaultTimekeeperIndex": "3323",
+      "DefaultTimekeeperNumber": "19999"
+    },
+    "PPSAutoTestUser1": {
+      "LoginId": "PPSAutoTestUser1@h3esharksdev01.onmicrosoft.com",
+      "FirstName": "AutoTestUser1",
+      "LastName": "PPS",
+      "PasswordEnvVar": "PTPD_AUTO1",
+      "DefaultTimekeeperIndex": "13590",
+      "DefaultTimekeeperNumber": "PPSAUTO1"
+    },
+    "PPSAutoTestUser2": {
+      "LoginId": "PPSAutoTestUser2@h3esharksdev01.onmicrosoft.com",
+      "FirstName": "AutoTestUser2",
+      "LastName": "PPS",
+      "PasswordEnvVar": "PTPD_AUTO",
+      "DefaultTimekeeperIndex": "13591",
+      "DefaultTimekeeperNumber": "PPSAUTO2"
+    }
+  }
+}
