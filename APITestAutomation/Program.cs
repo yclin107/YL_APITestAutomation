@@ -6,8 +6,18 @@ namespace APITestAutomation
     {
         static async Task Main(string[] args)
         {
-            var cli = new OpenApiTestCLI();
-            await cli.RunAsync(args);
+            if (args.Length == 0)
+            {
+                // Show interactive menu
+                var menu = new InteractiveMenu();
+                await menu.ShowMenuAsync();
+            }
+            else
+            {
+                // Use CLI mode
+                var cli = new OpenApiTestCLI();
+                await cli.RunAsync(args);
+            }
         }
     }
 }

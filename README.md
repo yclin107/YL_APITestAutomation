@@ -2,61 +2,86 @@
 
 ## OpenAPI Test Generator
 
-Este framework ahora incluye un generador automático de tests basado en especificaciones OpenAPI (Swagger).
+This framework now includes an automatic test generator based on OpenAPI (Swagger) specifications.
 
-### Características
+### Features
 
-- **Importación automática** de archivos JSON/YAML de OpenAPI
-- **Generación automática** de tests para todos los endpoints
-- **Detección de cambios** automática cuando se actualiza la especificación
-- **Validaciones incluidas**:
-  - Status codes esperados
+- **Automatic import** of OpenAPI JSON/YAML files
+- **Automatic test generation** for all endpoints
+- **Automatic change detection** when specification is updated
+- **Built-in validations**:
+  - Expected status codes
   - Schema validation
-  - Tests de paths negativos (unauthorized, missing parameters)
+  - Negative path tests (unauthorized, missing parameters)
   - Response validation
+- **BDD Support** with reusable step definitions
+- **Interactive CLI menu** for easy operation
+- **Manual test protection** - preserves your custom modifications
 
-### Uso
+### Usage
 
-#### 1. Generar tests desde una especificación OpenAPI
+#### Interactive Menu
+```bash
+dotnet run --project APITestAutomation
+```
+
+#### Direct Commands
+
+#### 1. Generate tests from OpenAPI specification
 
 ```bash
 dotnet run --project APITestAutomation generate swagger.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser0
 ```
 
-#### 2. Detectar cambios en la especificación
+#### 2. Detect changes in specification
 
 ```bash
 dotnet run --project APITestAutomation detect swagger.json
 ```
 
-#### 3. Preview de tests que se generarían
+#### 3. Preview tests that would be generated
 
 ```bash
 dotnet run --project APITestAutomation preview swagger.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser0
 ```
 
-### Flujo de trabajo
+### Workflow
 
-1. **Primera vez**: Ejecuta `generate` para crear los tests iniciales
-2. **Actualizaciones**: Ejecuta `detect` para ver qué cambios hay
-3. **Aplicar cambios**: Ejecuta `generate` nuevamente, el sistema te preguntará si quieres aplicar los cambios
-4. **Reporte**: Se genera automáticamente un reporte con todos los cambios aplicados
+1. **First time**: Run `generate` to create initial tests
+2. **Updates**: Run `detect` to see what changes exist
+3. **Apply changes**: Run `generate` again, system will ask if you want to apply changes
+4. **Report**: Automatically generates a report with all applied changes
 
-### Estructura de archivos generados
+### Generated file structure
 
-- `APITestAutomationTest/Generated/` - Tests generados automáticamente
-- `APITestAutomation/Config/OpenAPI/` - Configuraciones y especificaciones guardadas
-- `APITestAutomation/Reports/` - Reportes de cambios aplicados
-- `APITestAutomation/Examples/` - Ejemplos de especificaciones OpenAPI
+- `APITestAutomationTest/Generated/` - Auto-generated tests
+- `APITestAutomation/Config/OpenAPI/` - Saved configurations and specifications
+- `APITestAutomation/Reports/` - Change reports
+- `APITestAutomation/Specifications/` - OpenAPI specification files
 
-### Ejemplo de especificación OpenAPI
+### BDD Support
 
-Puedes encontrar un ejemplo en `APITestAutomation/Examples/sample-openapi.json`
+The framework includes BDD support with reusable step definitions:
 
-### Tests generados automáticamente
+- `APITestAutomationTest/StepDefinitions/` - Reusable step definitions
+- `APITestAutomationTest/Features/` - BDD feature files
+- Easy workflow composition using multiple endpoints
 
-Para cada endpoint se generan:
-- **Test positivo**: Verifica que el endpoint funciona correctamente
-- **Test de autorización**: Verifica que endpoints protegidos requieren autenticación
-- **Test de parámetros requeridos**: Verifica validación de parámetros obligatorios
-- **Test de validación de schema**: Verifica que la respuesta cumple con el schema definido
+### Example OpenAPI specification
+
+You can find an example in `APITestAutomation/Specifications/sample-openapi.json`
+
+### Auto-generated tests
+
+For each endpoint, the following tests are generated:
+- **Positive test**: Verifies endpoint works correctly
+- **Authorization test**: Verifies protected endpoints require authentication
+- **Required parameters test**: Verifies validation of mandatory parameters
+- **Schema validation test**: Verifies response complies with defined schema
+
+### Manual Test Protection
+
+When you modify auto-generated tests manually:
+- System detects your changes
+- Asks if you want to preserve or overwrite your modifications
+- Maintains a backup of your custom changes

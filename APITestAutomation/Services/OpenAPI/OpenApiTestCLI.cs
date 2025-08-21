@@ -138,9 +138,11 @@ Commands:
   preview <spec-path> <tenant> <user-id> [base-url]  - Preview what tests would be generated
 
 Examples:
-  generate swagger.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser0
-  detect api-spec.yaml https://api.example.com
-  preview openapi.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser1 https://api.example.com
+  generate Specifications/swagger.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser0
+  detect Specifications/api-spec.yaml https://api.example.com
+  preview Specifications/openapi.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser1 https://api.example.com
+
+Run without arguments to use interactive menu.
 ");
         }
     }

@@ -9,6 +9,7 @@ namespace APITestAutomation.Services.OpenAPI
         private readonly string _configPath;
         private readonly string _testsPath;
         private readonly string _reportsPath;
+        private readonly TestProtectionManager _protectionManager;
 
         public OpenApiTestManager(string configPath = "Config/OpenAPI", string testsPath = "Generated", string reportsPath = "Reports")
         {
@@ -17,6 +18,7 @@ namespace APITestAutomation.Services.OpenAPI
             var solutionRoot = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..");
             _testsPath = Path.Combine(solutionRoot, "APITestAutomationTest", "Generated");
             _reportsPath = Path.Combine(AppContext.BaseDirectory, reportsPath);
+            _protectionManager = new TestProtectionManager();
             
             Directory.CreateDirectory(_configPath);
             Directory.CreateDirectory(_testsPath);
@@ -128,7 +130,27 @@ namespace APITestAutomation.Services.OpenAPI
                 var fileName = $"{className}.cs";
                 var filePath = Path.Combine(tagFolderPath, fileName);
                 
+                // Check if file was manually modified
+                if (File.Exists(filePath))
+                {
+                    var existingContent = await File.ReadAllTextAsync(filePath);
+                    var isModified = await _protectionManager.IsTestModifiedAsync(filePath, testCode);
+                    
+                    if (isModified)
+                    {
+                        var shouldOverwrite = await _protectionManager.ShouldOverwriteModifiedTestAsync(filePath);
+                        if (!shouldOverwrite)
+                        {
+                            Console.WriteLine($"⏭️  Skipping {fileName} (manually modified)");
+                            continue;
+                        }
+                        
+                        await _protectionManager.CreateBackupAsync(filePath);
+                    }
+                }
+                
                 await File.WriteAllTextAsync(filePath, testCode);
+                await _protectionManager.SaveOriginalHashAsync(filePath, testCode);
                 generatedFiles.Add(filePath);
             }
             
