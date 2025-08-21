@@ -49,8 +49,8 @@ namespace APITestAutomation.Services.OpenAPI
         private void ShowHeader()
         {
             Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║                    OpenAPI Test Generator                    ║");
-            Console.WriteLine("║                     API Test Automation                     ║");
+            Console.WriteLine("║                    Elite Test Generator                      ║");
+            Console.WriteLine("║                     API Test Automation                      ║");
             Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
             Console.WriteLine();
         }

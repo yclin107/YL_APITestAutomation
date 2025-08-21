@@ -17,7 +17,7 @@
         }
     ],
     "paths": {
-        "/attachment": {
+        "/attachment/v2": {
             "get": {
                 "tags": [
                     "Attachment"

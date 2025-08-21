@@ -1,0 +1,1026 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "DEV - 3E OData API",
+        "description": "The 3E OData API provides a powerful and convenient Web Services API for interacting with the 3E platform...<a href=\"/doc/3e/odataapi\" target=\"_blank\">Read More</a>",
+        "contact": {
+            "name": "API Support",
+            "email": "3EAPI@elite.com"
+        },
+        "license": {
+            "name": "Proprietary",
+            "url": "https://www.elite.com/"
+        },
+        "version": "1.0"
+    },
+    "servers": [
+        {
+            "url": "https://api.us.nonprod.elite.com/dev/3e/odata"
+        },
+        {
+            "url": "https://api.uk.nonprod.elite.com/dev/3e/odata"
+        },
+        {
+            "url": "https://api.nonprod.elite.com/dev/3e/odata"
+        }
+    ],
+    "paths": {
+        "/": {
+            "get": {
+                "tags": [
+                    "OData Catalog"
+                ],
+                "summary": "Catalog",
+                "operationId": "Catalog",
+                "parameters": [
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-UserAuthorization",
+                        "in": "header",
+                        "description": "User authorization token",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "OData Catalog",
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/$metadata": {
+            "get": {
+                "tags": [
+                    "Metadata"
+                ],
+                "summary": "Metadata",
+                "operationId": "Metadata",
+                "parameters": [
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-UserAuthorization",
+                        "in": "header",
+                        "description": "User authorization token",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/xml": {
+                                "schema": {
+                                    "title": "Collection of metadata entities",
+                                    "type": "object"
+                                },
+                                "example": "<metadataGet200ApplicationXmlResponse />"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/$batch": {
+            "post": {
+                "tags": [
+                    "Batch"
+                ],
+                "summary": "Batch",
+                "operationId": "Batch",
+                "parameters": [
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-UserAuthorization",
+                        "in": "header",
+                        "description": "User authorization token",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Collection of responses",
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/{entity}": {
+            "get": {
+                "tags": [
+                    "Entity"
+                ],
+                "summary": "Entity_Get",
+                "operationId": "Entity_Get",
+                "parameters": [
+                    {
+                        "name": "entity",
+                        "in": "path",
+                        "description": "The entity name.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "$top",
+                        "in": "query",
+                        "description": "Show only the first n items, see [OData Paging – Top](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptiontop)",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "$skip",
+                        "in": "query",
+                        "description": "Skip the first n items, see [OData Paging - Skip](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionskip)",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "$count",
+                        "in": "query",
+                        "description": "Include count of items, see [OData Count](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptioncount)",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "$filter",
+                        "in": "query",
+                        "description": "Filter items by property values, see [OData Filter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "$select",
+                        "in": "query",
+                        "description": "Select properties that will be returned in the request, see [OData Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "$expand",
+                        "in": "query",
+                        "description": "Expands an navigation property, see [OData Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-UserAuthorization",
+                        "in": "header",
+                        "description": "User authorization token",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Collection of entities",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                },
+                                "example": [
+                                    {}
+                                ]
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Microsoft.OData.ODataError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Entity"
+                ],
+                "summary": "Entity_Post",
+                "operationId": "Entity_Post",
+                "parameters": [
+                    {
+                        "name": "entity",
+                        "in": "path",
+                        "description": "The entity name.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-UserAuthorization",
+                        "in": "header",
+                        "description": "User authorization token",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                },
+                                "example": [
+                                    {}
+                                ]
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Microsoft.OData.ODataError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/{entity}({key})": {
+            "get": {
+                "tags": [
+                    "Entity"
+                ],
+                "summary": "Entity_Get_Key",
+                "operationId": "Entity_Get_Key",
+                "parameters": [
+                    {
+                        "name": "entity",
+                        "in": "path",
+                        "description": "The entity name.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "The entity key.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "$top",
+                        "in": "query",
+                        "description": "Show only the first n items, see [OData Paging – Top](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptiontop)",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "$skip",
+                        "in": "query",
+                        "description": "Skip the first n items, see [OData Paging - Skip](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionskip)",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "$count",
+                        "in": "query",
+                        "description": "Include count of items, see [OData Count](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptioncount)",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "$filter",
+                        "in": "query",
+                        "description": "Filter items by property values, see [OData Filter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "$select",
+                        "in": "query",
+                        "description": "Select properties that will be returned in the request, see [OData Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "$expand",
+                        "in": "query",
+                        "description": "Expands an navigation property, see [OData Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-UserAuthorization",
+                        "in": "header",
+                        "description": "User authorization token",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Collection of entities",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                },
+                                "example": [
+                                    {}
+                                ]
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Microsoft.OData.ODataError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Entity"
+                ],
+                "summary": "Entity_Patch",
+                "operationId": "Entity_Patch",
+                "parameters": [
+                    {
+                        "name": "entity",
+                        "in": "path",
+                        "description": "The entity name.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "The entity key.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "X-3E-UserAuthorization",
+                        "in": "header",
+                        "description": "User authorization token",
+                        "schema": {
+                            "type": "string",
+                            "nullable": true
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Collection of entities",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                },
+                                "example": [
+                                    {}
+                                ]
+                            }
+                        }
+                    },
+                    "204": {
+                        "description": "Success"
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Microsoft.OData.ODataError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/{entity}({key})/ExecuteAction": {
+            "post": {
+                "tags": [
+                    "Entity"
+                ],
+                "summary": "Execute_Action",
+                "operationId": "Execute_Action",
+                "parameters": [
+                    {
+                        "name": "entity",
+                        "in": "path",
+                        "description": "The entity name.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "The entity key.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "NoContent"
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Microsoft.OData.ODataError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/explorer/QueryAttributes/{entity}": {
+            "get": {
+                "tags": [
+                    "Explorer"
+                ],
+                "summary": "Get_Query_Attributes",
+                "operationId": "Get_Query_Attributes",
+                "parameters": [
+                    {
+                        "name": "entity",
+                        "in": "path",
+                        "description": "The entity name.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "title": "Collection of attributes",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                },
+                                "example": [
+                                    {}
+                                ]
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Microsoft.OData.ODataError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/info": {
+            "get": {
+                "tags": [
+                    "Info"
+                ],
+                "summary": "Info_GetODataInfo",
+                "operationId": "Info_GetODataInfo",
+                "parameters": [
+                    {
+                        "name": "3eInstanceId",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-3E-InstanceId",
+                        "in": "header",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/E3E.OData.Api.Models.ODataInfo"
+                                },
+                                "example": {
+                                    "apiVersion": "string",
+                                    "uiCoreVersion": "string",
+                                    "runtimeVersion": "string",
+                                    "buildId": "string",
+                                    "buildNumber": "string",
+                                    "user": "string",
+                                    "baseUri": "string",
+                                    "clients": [
+                                        "string"
+                                    ],
+                                    "userMapping": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                                },
+                                "example": {
+                                    "type": "string",
+                                    "title": "string",
+                                    "status": 0,
+                                    "detail": "string",
+                                    "instance": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails"
+                                },
+                                "example": {
+                                    "type": "string",
+                                    "title": "string",
+                                    "status": 0,
+                                    "detail": "string",
+                                    "instance": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "E3E.OData.Api.Models.ODataInfo": {
+                "type": "object",
+                "properties": {
+                    "apiVersion": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "uiCoreVersion": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "runtimeVersion": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "buildId": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "buildNumber": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "user": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "baseUri": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "clients": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "nullable": true
+                    },
+                    "userMapping": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Microsoft.OData.ODataError": {
+                "type": "object",
+                "properties": {
+                    "typeAnnotation": {
+                        "$ref": "#/components/schemas/Microsoft.OData.ODataTypeAnnotation"
+                    },
+                    "errorCode": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "target": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "details": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Microsoft.OData.ODataErrorDetail"
+                        },
+                        "nullable": true
+                    },
+                    "innerError": {
+                        "$ref": "#/components/schemas/Microsoft.OData.ODataInnerError"
+                    },
+                    "instanceAnnotations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Microsoft.OData.ODataInstanceAnnotation"
+                        },
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Microsoft.OData.ODataErrorDetail": {
+                "type": "object",
+                "properties": {
+                    "errorCode": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "target": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Microsoft.OData.ODataInnerError": {
+                "type": "object",
+                "properties": {
+                    "properties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/Microsoft.OData.ODataValue"
+                        },
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "typeName": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "stackTrace": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "innerError": {
+                        "$ref": "#/components/schemas/Microsoft.OData.ODataInnerError"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Microsoft.OData.ODataInstanceAnnotation": {
+                "type": "object",
+                "properties": {
+                    "typeAnnotation": {
+                        "$ref": "#/components/schemas/Microsoft.OData.ODataTypeAnnotation"
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "value": {
+                        "$ref": "#/components/schemas/Microsoft.OData.ODataValue"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Microsoft.OData.ODataTypeAnnotation": {
+                "type": "object",
+                "properties": {
+                    "typeName": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Microsoft.OData.ODataValue": {
+                "type": "object",
+                "properties": {
+                    "typeAnnotation": {
+                        "$ref": "#/components/schemas/Microsoft.OData.ODataTypeAnnotation"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "Microsoft.AspNetCore.Mvc.ProblemDetails": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "integer",
+                        "format": "int32",
+                        "nullable": true
+                    },
+                    "detail": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "instance": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": {}
+            }
+        }
+    }
+}
