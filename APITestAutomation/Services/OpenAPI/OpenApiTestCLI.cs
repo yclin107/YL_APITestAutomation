@@ -128,6 +128,40 @@ namespace APITestAutomation.Services.OpenAPI
             Console.WriteLine(preview);
         }
 
+        private async Task<string> PromptForTenant()
+        {
+            Console.WriteLine("\nAvailable tenants:");
+            Console.WriteLine("1. ptpd68r3nke7q5pnutzaaw (dev)");
+            Console.WriteLine("2. q7v1n2oexe2yohe1ttb9yq (test)");
+            Console.Write("Select tenant (1-2): ");
+            
+            var choice = Console.ReadLine();
+            return choice switch
+            {
+                "1" => "ptpd68r3nke7q5pnutzaaw",
+                "2" => "q7v1n2oexe2yohe1ttb9yq",
+                _ => "ptpd68r3nke7q5pnutzaaw" // default
+            };
+        }
+
+        private async Task<string> PromptForUser(string tenant)
+        {
+            Console.WriteLine($"\nAvailable users for {tenant}:");
+            Console.WriteLine("1. PPSAutoTestUser0");
+            Console.WriteLine("2. PPSAutoTestUser1");
+            Console.WriteLine("3. PPSAutoTestUser2");
+            Console.Write("Select user (1-3): ");
+            
+            var choice = Console.ReadLine();
+            return choice switch
+            {
+                "1" => "PPSAutoTestUser0",
+                "2" => "PPSAutoTestUser1", 
+                "3" => "PPSAutoTestUser2",
+                _ => "PPSAutoTestUser0" // default
+            };
+        }
+
         private void ShowHelp()
         {
             Console.WriteLine(@"
