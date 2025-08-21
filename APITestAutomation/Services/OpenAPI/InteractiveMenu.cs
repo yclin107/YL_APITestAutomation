@@ -196,7 +196,7 @@ namespace APITestAutomation.Services.OpenAPI
             Console.WriteLine("=== Available Specification Files ===");
             Console.WriteLine();
 
-            var specDir = Path.Combine(AppContext.BaseDirectory, "Specifications");
+            var specDir = GetSpecificationsDirectory();
             if (!Directory.Exists(specDir))
             {
                 Console.WriteLine("No specifications directory found.");
@@ -229,13 +229,51 @@ namespace APITestAutomation.Services.OpenAPI
             PauseForUser();
         }
 
+        private string GetSpecificationsDirectory()
+        {
+            // Always point to APITestAutomation/Specifications
+            return Path.Combine(AppContext.BaseDirectory, "Specifications");
+        }
+
+        private string GetLastUsedSpecPath()
+        {
+            var configPath = Path.Combine(AppContext.BaseDirectory, "Config", "OpenAPI", "last-used-spec.txt");
+            if (File.Exists(configPath))
+            {
+                return File.ReadAllText(configPath).Trim();
+            }
+            return string.Empty;
+        }
+
+        private void SaveLastUsedSpecPath(string specPath)
+        {
+            var configDir = Path.Combine(AppContext.BaseDirectory, "Config", "OpenAPI");
+            Directory.CreateDirectory(configDir);
+            var configPath = Path.Combine(configDir, "last-used-spec.txt");
+            File.WriteAllText(configPath, specPath);
+        }
+
         private string GetSpecificationPath()
         {
-            Console.Write("Enter OpenAPI specification file path (or press Enter to browse): ");
+            var lastUsed = GetLastUsedSpecPath();
+            if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
+            {
+                Console.WriteLine($"Last used specification: {Path.GetFileName(lastUsed)}");
+                Console.Write($"Press Enter to use '{Path.GetFileName(lastUsed)}' or type new path: ");
+            }
+            else
+            {
+                Console.Write("Enter OpenAPI specification file path (or press Enter to browse): ");
+            }
+            
             var input = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrEmpty(input))
             {
+                if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
+                {
+                    return lastUsed;
+                }
                 return BrowseSpecificationFiles();
             }
 
@@ -246,12 +284,13 @@ namespace APITestAutomation.Services.OpenAPI
                 return string.Empty;
             }
 
+            SaveLastUsedSpecPath(input);
             return input;
         }
 
         private string BrowseSpecificationFiles()
         {
-            var specDir = Path.Combine(AppContext.BaseDirectory, "Specifications");
+            var specDir = GetSpecificationsDirectory();
             if (!Directory.Exists(specDir))
             {
                 Console.WriteLine("❌ Specifications directory not found.");
@@ -280,7 +319,9 @@ namespace APITestAutomation.Services.OpenAPI
             Console.Write($"Select file (1-{files.Count}): ");
             if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= files.Count)
             {
-                return files[choice - 1];
+                var selectedPath = files[choice - 1];
+                SaveLastUsedSpecPath(selectedPath);
+                return selectedPath;
             }
 
             Console.WriteLine("❌ Invalid selection.");
