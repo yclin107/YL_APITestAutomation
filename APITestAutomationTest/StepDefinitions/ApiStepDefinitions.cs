@@ -14,7 +14,7 @@ namespace APITestAutomationTest.StepDefinitions
         private object? _requestBody;
         private object? _response;
         private string _rawResponse = string.Empty;
-        private RestAssured.Response.ValidatableResponse? _validatableResponse;
+        private RestAssured.Response.VerifiableResponse? _validatableResponse;
 
         public void InitializeContext(string tenant, string userId, string baseUrl)
         {
