@@ -6,11 +6,11 @@ namespace APITestAutomation.Services.OpenAPI
 {
     public class TestCodeGenerator
     {
-        public static string GenerateTestClass(OpenApiTestSpec spec, string tenant, string userId, string className)
+        public static string GenerateTestClassByTag(OpenApiTestSpec spec, List<OpenApiEndpointTest> endpoints, string tenant, string userId, string className, string tag)
         {
             var sb = new StringBuilder();
             
-            // Generate using statements
+            // Generate using statements following the existing pattern
             sb.AppendLine("using Allure.Net.Commons;");
             sb.AppendLine("using Allure.NUnit.Attributes;");
             sb.AppendLine("using APITestAutomation.Helpers;");
@@ -20,11 +20,11 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine("using Newtonsoft.Json.Linq;");
             sb.AppendLine();
 
-            // Generate namespace and class
-            sb.AppendLine("namespace APITestAutomationTest.Generated");
+            // Generate namespace and class following the existing pattern
+            sb.AppendLine($"namespace APITestAutomationTest.Generated.{tag}");
             sb.AppendLine("{");
             sb.AppendLine("    [TestFixture]");
-            sb.AppendLine($"    [AllureFeature(\"{spec.Document.Info?.Title ?? "Generated API Tests"}\")]");
+            sb.AppendLine($"    [AllureFeature(\"{tag} API Tests\")]");
             sb.AppendLine($"    public class {className} : TestBase");
             sb.AppendLine("    {");
             sb.AppendLine($"        private readonly string _baseUrl = \"{spec.BaseUrl}\";");
@@ -32,62 +32,79 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine($"        private readonly string _userId = \"{userId}\";");
             sb.AppendLine();
 
-            // Generate setup method
-            sb.AppendLine("        [SetUp]");
-            sb.AppendLine("        public void Setup()");
-            sb.AppendLine("        {");
-            sb.AppendLine($"            InitContext(_tenant, _userId, \"{spec.Document.Info?.Title ?? "Generated API Tests"}\");");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-
             // Generate test methods for each endpoint
-            foreach (var endpoint in spec.EndpointTests.Values)
+            foreach (var endpoint in endpoints)
             {
-                GenerateEndpointTests(sb, endpoint, spec);
+                GenerateEndpointTestsWithAllurePattern(sb, endpoint, spec);
             }
 
+            // Add helper methods
+            sb.AppendLine(GenerateHelperMethods());
+            
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
             return sb.ToString();
         }
 
-        private static void GenerateEndpointTests(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
+        private static void GenerateEndpointTestsWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
         {
             var methodName = SanitizeMethodName(endpoint.OperationId);
+            var tag = endpoint.Tags.FirstOrDefault() ?? "General";
             
-            // Generate positive test
-            GeneratePositiveTest(sb, endpoint, methodName);
+            // Generate positive test following the existing pattern
+            GeneratePositiveTestWithAllurePattern(sb, endpoint, methodName, tag);
             
             // Generate negative tests
-            GenerateUnauthorizedTest(sb, endpoint, methodName);
+            if (endpoint.RequiresAuth)
+            {
+                GenerateUnauthorizedTestWithAllurePattern(sb, endpoint, methodName, tag);
+            }
             
             if (endpoint.Parameters.Any(p => p.Required))
             {
-                GenerateMissingRequiredParametersTest(sb, endpoint, methodName);
+                GenerateMissingRequiredParametersTestWithAllurePattern(sb, endpoint, methodName, tag);
             }
             
             // Generate schema validation test if response has schema
             if (endpoint.Responses.ContainsKey("200") || endpoint.Responses.ContainsKey("201"))
             {
-                GenerateSchemaValidationTest(sb, endpoint, methodName);
+                GenerateSchemaValidationTestWithAllurePattern(sb, endpoint, methodName, tag);
             }
         }
 
-        private static void GeneratePositiveTest(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName)
+        private static void GeneratePositiveTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine("        [Category(\"Generated\")]");
-            sb.AppendLine($"        public void {methodName}_PositiveTest()");
+            sb.AppendLine($"        [TestCase(\"{GetDefaultTenant()}\", \"{GetDefaultUserId()}\")]");
+            sb.AppendLine($"        public void {tag}_API_{methodName}_PositiveTest(string tenant, string userId)");
             sb.AppendLine("        {");
-            sb.AppendLine($"            var user = ConfigSetup.GetUser(_tenant, _userId);");
+            sb.AppendLine($"            InitContext(tenant, userId, \"{tag} API Feature\");");
+            sb.AppendLine("            var user = ConfigSetup.GetUser(tenant, userId);");
             
             if (endpoint.RequiresAuth)
             {
-                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(_tenant, user);");
+                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(tenant, user);");
             }
             
+            sb.AppendLine("            var baseUrl = _baseUrl;");
             sb.AppendLine();
+
+            // Generate request body if needed
+            if (endpoint.RequestBody != null)
+            {
+                sb.AppendLine("            var requestBody = GenerateTestRequestBody();");
+                sb.AppendLine();
+                sb.AppendLine("            AllureApi.Step(\"Generate & Attach Request Body\", () =>");
+                sb.AppendLine("            {");
+                sb.AppendLine("                string requestBodyJson = serializeToJson(requestBody);");
+                sb.AppendLine($"                AttachResponse(\"{methodName}Request\", requestBodyJson);");
+                sb.AppendLine("            });");
+                sb.AppendLine();
+            }
+
+            // Generate the main API call
             sb.AppendLine($"            var response = AllureApi.Step(\"Execute {endpoint.Method} {endpoint.Path}\", () =>");
             sb.AppendLine("            {");
             sb.AppendLine("                return Given()");
@@ -95,8 +112,8 @@ namespace APITestAutomation.Services.OpenAPI
             if (endpoint.RequiresAuth)
             {
                 sb.AppendLine("                    .OAuth2(token)");
-                sb.AppendLine("                    .Header(\"x-3e-tenantid\", _tenant)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", _tenant)");
+                sb.AppendLine("                    .Header(\"x-3e-tenantid\", tenant)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", tenant)");
             }
             
             // Add parameters
@@ -106,21 +123,16 @@ namespace APITestAutomation.Services.OpenAPI
                 {
                     sb.AppendLine($"                    .QueryParam(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
                 }
-                else if (param.In == ParameterLocation.Header)
+                else if (param.In == ParameterLocation.Header && param.Name.ToLower() != "authorization")
                 {
                     sb.AppendLine($"                    .Header(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
-                }
-                else if (param.In == ParameterLocation.Path)
-                {
-                    // Path parameters are handled in the URL template
-                    // We'll replace them in the URL
                 }
             }
             
             // Add request body if needed
             if (endpoint.RequestBody != null)
             {
-                sb.AppendLine("                    .Body(GenerateTestRequestBody())");
+                sb.AppendLine("                    .Body(requestBody)");
             }
             
             // Handle path parameters in URL
@@ -131,7 +143,7 @@ namespace APITestAutomation.Services.OpenAPI
             }
             
             sb.AppendLine("                    .When()");
-            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{urlPath}\")");
+            sb.AppendLine($"                    .{endpoint.Method.Substring(0, 1).ToUpper()}{endpoint.Method.Substring(1).ToLower()}($\"{{baseUrl}}{urlPath}\")");
             sb.AppendLine("                    .Then()");
             
             // Add expected status codes
@@ -148,58 +160,94 @@ namespace APITestAutomation.Services.OpenAPI
             
             sb.AppendLine("            });");
             sb.AppendLine();
+            
+            // Extract and attach response
             sb.AppendLine("            var rawJson = response.Extract().Response().Content.ReadAsStringAsync().Result;");
-            sb.AppendLine("            AttachResponse(\"Response\", rawJson);");
+            sb.AppendLine("            var statusCode = response.Extract().Response().StatusCode;");
             sb.AppendLine();
-            sb.AppendLine("            Assert.That(response.Extract().Response().IsSuccessStatusCode, Is.True, \"Request should be successful\");");
+            sb.AppendLine($"            AllureApi.Step(\"Get & Attach {methodName}Response\", () =>");
+            sb.AppendLine("            {");
+            sb.AppendLine($"                AttachResponse(\"{methodName}Response\", rawJson);");
+            sb.AppendLine("            });");
+            sb.AppendLine();
+            
+            // Assertions following the existing pattern
+            sb.AppendLine($"            AllureApi.Step(\"Assert {methodName} response is successful\", () =>");
+            sb.AppendLine("            {");
+            sb.AppendLine("                Assert.Multiple(() =>");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    Assert.That(response.Extract().Response().IsSuccessStatusCode, Is.True, \"Request should be successful\");");
+            sb.AppendLine("                    Assert.That(string.IsNullOrEmpty(rawJson), Is.False, \"Response should not be empty\");");
+            sb.AppendLine("                });");
+            sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
         }
 
-        private static void GenerateUnauthorizedTest(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName)
+        private static void GenerateUnauthorizedTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
         {
-            if (!endpoint.RequiresAuth) return;
-            
             sb.AppendLine("        [Test]");
             sb.AppendLine("        [Category(\"Generated\")]");
-            sb.AppendLine($"        public void {methodName}_UnauthorizedTest()");
+            sb.AppendLine($"        [TestCase(\"{GetDefaultTenant()}\", \"{GetDefaultUserId()}\")]");
+            sb.AppendLine($"        public void {tag}_API_{methodName}_UnauthorizedTest(string tenant, string userId)");
             sb.AppendLine("        {");
+            sb.AppendLine($"            InitContext(tenant, userId, \"{tag} API Feature\");");
+            sb.AppendLine("            var baseUrl = _baseUrl;");
+            sb.AppendLine();
+
             sb.AppendLine($"            var response = AllureApi.Step(\"Execute {endpoint.Method} {endpoint.Path} without authorization\", () =>");
             sb.AppendLine("            {");
             sb.AppendLine("                return Given()");
-            sb.AppendLine("                    .When()");
             
-            // Handle path parameters in URL for unauthorized test
+            // Add non-auth parameters
+            foreach (var param in endpoint.Parameters.Where(p => p.Required && p.In != ParameterLocation.Header))
+            {
+                if (param.In == ParameterLocation.Query)
+                {
+                    sb.AppendLine($"                    .QueryParam(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
+                }
+            }
+            
+            // Handle path parameters in URL
             var urlPath = endpoint.Path;
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
             {
                 urlPath = urlPath.Replace($"{{{param.Name}}}", $"{{GetTestValue(\"{param.Schema?.Type ?? "string"}\")}}");
             }
             
-            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{urlPath}\")");
+            sb.AppendLine("                    .When()");
+            sb.AppendLine($"                    .{endpoint.Method.Substring(0, 1).ToUpper()}{endpoint.Method.Substring(1).ToLower()}($\"{{baseUrl}}{urlPath}\")");
             sb.AppendLine("                    .Then()");
             sb.AppendLine("                    .StatusCode(401);");
             sb.AppendLine("            });");
             sb.AppendLine();
-            sb.AppendLine("            Assert.That(response.Extract().Response().StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Unauthorized));");
+            
+            sb.AppendLine("            AllureApi.Step(\"Assert unauthorized response\", () =>");
+            sb.AppendLine("            {");
+            sb.AppendLine("                Assert.That(response.Extract().Response().StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Unauthorized));");
+            sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
         }
 
-        private static void GenerateMissingRequiredParametersTest(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName)
+        private static void GenerateMissingRequiredParametersTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine("        [Category(\"Generated\")]");
-            sb.AppendLine($"        public void {methodName}_MissingRequiredParametersTest()");
+            sb.AppendLine($"        [TestCase(\"{GetDefaultTenant()}\", \"{GetDefaultUserId()}\")]");
+            sb.AppendLine($"        public void {tag}_API_{methodName}_MissingRequiredParametersTest(string tenant, string userId)");
             sb.AppendLine("        {");
-            sb.AppendLine($"            var user = ConfigSetup.GetUser(_tenant, _userId);");
+            sb.AppendLine($"            InitContext(tenant, userId, \"{tag} API Feature\");");
+            sb.AppendLine("            var user = ConfigSetup.GetUser(tenant, userId);");
             
             if (endpoint.RequiresAuth)
             {
-                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(_tenant, user);");
+                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(tenant, user);");
             }
             
+            sb.AppendLine("            var baseUrl = _baseUrl;");
             sb.AppendLine();
+
             sb.AppendLine($"            var response = AllureApi.Step(\"Execute {endpoint.Method} {endpoint.Path} with missing required parameters\", () =>");
             sb.AppendLine("            {");
             sb.AppendLine("                return Given()");
@@ -207,43 +255,57 @@ namespace APITestAutomation.Services.OpenAPI
             if (endpoint.RequiresAuth)
             {
                 sb.AppendLine("                    .OAuth2(token)");
-                sb.AppendLine("                    .Header(\"x-3e-tenantid\", _tenant)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", _tenant)");
+                sb.AppendLine("                    .Header(\"x-3e-tenantid\", tenant)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", tenant)");
             }
             
-            sb.AppendLine("                    .When()");
-            
-            // Handle path parameters in URL for missing parameters test
+            // Handle path parameters in URL (still need these for the URL to be valid)
             var urlPath = endpoint.Path;
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
             {
                 urlPath = urlPath.Replace($"{{{param.Name}}}", $"{{GetTestValue(\"{param.Schema?.Type ?? "string"}\")}}");
             }
             
-            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{urlPath}\")");
+            sb.AppendLine("                    .When()");
+            sb.AppendLine($"                    .{endpoint.Method.Substring(0, 1).ToUpper()}{endpoint.Method.Substring(1).ToLower()}($\"{{baseUrl}}{urlPath}\")");
             sb.AppendLine("                    .Then()");
             sb.AppendLine("                    .StatusCode(400);");
             sb.AppendLine("            });");
             sb.AppendLine();
-            sb.AppendLine("            Assert.That(response.Extract().Response().StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));");
+            
+            sb.AppendLine("            AllureApi.Step(\"Assert bad request response\", () =>");
+            sb.AppendLine("            {");
+            sb.AppendLine("                Assert.That(response.Extract().Response().StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));");
+            sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
         }
 
-        private static void GenerateSchemaValidationTest(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName)
+        private static void GenerateSchemaValidationTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine("        [Category(\"Generated\")]");
-            sb.AppendLine($"        public void {methodName}_SchemaValidationTest()");
+            sb.AppendLine($"        [TestCase(\"{GetDefaultTenant()}\", \"{GetDefaultUserId()}\")]");
+            sb.AppendLine($"        public void {tag}_API_{methodName}_SchemaValidationTest(string tenant, string userId)");
             sb.AppendLine("        {");
-            sb.AppendLine($"            var user = ConfigSetup.GetUser(_tenant, _userId);");
+            sb.AppendLine($"            InitContext(tenant, userId, \"{tag} API Feature\");");
+            sb.AppendLine("            var user = ConfigSetup.GetUser(tenant, userId);");
             
             if (endpoint.RequiresAuth)
             {
-                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(_tenant, user);");
+                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(tenant, user);");
             }
             
+            sb.AppendLine("            var baseUrl = _baseUrl;");
             sb.AppendLine();
+
+            // Generate request body if needed
+            if (endpoint.RequestBody != null)
+            {
+                sb.AppendLine("            var requestBody = GenerateTestRequestBody();");
+                sb.AppendLine();
+            }
+
             sb.AppendLine($"            var response = AllureApi.Step(\"Execute {endpoint.Method} {endpoint.Path} for schema validation\", () =>");
             sb.AppendLine("            {");
             sb.AppendLine("                return Given()");
@@ -251,8 +313,8 @@ namespace APITestAutomation.Services.OpenAPI
             if (endpoint.RequiresAuth)
             {
                 sb.AppendLine("                    .OAuth2(token)");
-                sb.AppendLine("                    .Header(\"x-3e-tenantid\", _tenant)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", _tenant)");
+                sb.AppendLine("                    .Header(\"x-3e-tenantid\", tenant)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", tenant)");
             }
             
             // Add required parameters with test values
@@ -262,7 +324,7 @@ namespace APITestAutomation.Services.OpenAPI
                 {
                     sb.AppendLine($"                    .QueryParam(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
                 }
-                else if (param.In == ParameterLocation.Header)
+                else if (param.In == ParameterLocation.Header && param.Name.ToLower() != "authorization")
                 {
                     sb.AppendLine($"                    .Header(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
                 }
@@ -270,10 +332,10 @@ namespace APITestAutomation.Services.OpenAPI
             
             if (endpoint.RequestBody != null)
             {
-                sb.AppendLine("                    .Body(GenerateTestRequestBody())");
+                sb.AppendLine("                    .Body(requestBody)");
             }
             
-            // Handle path parameters in URL for schema validation test
+            // Handle path parameters in URL
             var urlPath = endpoint.Path;
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
             {
@@ -281,17 +343,27 @@ namespace APITestAutomation.Services.OpenAPI
             }
             
             sb.AppendLine("                    .When()");
-            sb.AppendLine($"                    .{endpoint.Method.ToLower().Substring(0, 1).ToUpper()}{endpoint.Method.ToLower().Substring(1)}($\"{{_baseUrl}}{urlPath}\")");
+            sb.AppendLine($"                    .{endpoint.Method.Substring(0, 1).ToUpper()}{endpoint.Method.Substring(1).ToLower()}($\"{{baseUrl}}{urlPath}\")");
             sb.AppendLine("                    .Then();");
             sb.AppendLine("            });");
             sb.AppendLine();
+            
             sb.AppendLine("            var rawJson = response.Extract().Response().Content.ReadAsStringAsync().Result;");
-            sb.AppendLine("            AttachResponse(\"Schema Validation Response\", rawJson);");
             sb.AppendLine();
+            sb.AppendLine($"            AllureApi.Step(\"Get & Attach Schema Validation Response\", () =>");
+            sb.AppendLine("            {");
+            sb.AppendLine($"                AttachResponse(\"{methodName}SchemaValidationResponse\", rawJson);");
+            sb.AppendLine("            });");
+            sb.AppendLine();
+            
             sb.AppendLine("            AllureApi.Step(\"Validate response schema\", () =>");
             sb.AppendLine("            {");
-            sb.AppendLine("                Assert.That(string.IsNullOrEmpty(rawJson), Is.False, \"Response should not be empty\");");
-            sb.AppendLine("                // TODO: Add specific schema validation based on OpenAPI spec");
+            sb.AppendLine("                Assert.Multiple(() =>");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    Assert.That(string.IsNullOrEmpty(rawJson), Is.False, \"Response should not be empty\");");
+            sb.AppendLine("                    Assert.That(response.Extract().Response().IsSuccessStatusCode, Is.True, \"Request should be successful for schema validation\");");
+            sb.AppendLine("                    // TODO: Add specific schema validation based on OpenAPI spec");
+            sb.AppendLine("                });");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -299,16 +371,27 @@ namespace APITestAutomation.Services.OpenAPI
 
         private static string SanitizeMethodName(string operationId)
         {
-            return operationId.Replace("-", "_").Replace(" ", "_");
+            return operationId.Replace("-", "_").Replace(" ", "_").Replace(".", "_");
         }
 
-        public static string GenerateHelperMethods()
+        private static string GetDefaultTenant()
+        {
+            return "ptpd68r3nke7q5pnutzaaw";
+        }
+
+        private static string GetDefaultUserId()
+        {
+            return "PPSAutoTestUser0";
+        }
+
+        private static string GenerateHelperMethods()
         {
             var sb = new StringBuilder();
             
+            sb.AppendLine();
             sb.AppendLine("        private object GetTestValue(string type)");
             sb.AppendLine("        {");
-            sb.AppendLine("            return type.ToLower() switch");
+            sb.AppendLine("            return type?.ToLower() switch");
             sb.AppendLine("            {");
             sb.AppendLine("                \"string\" => \"test-value\",");
             sb.AppendLine("                \"integer\" => 123,");
@@ -324,7 +407,7 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine();
             sb.AppendLine("        private object GenerateTestRequestBody()");
             sb.AppendLine("        {");
-            sb.AppendLine("            return new { testProperty = \"testValue\" };");
+            sb.AppendLine("            return new { testProperty = \"testValue\", id = Guid.NewGuid() };");
             sb.AppendLine("        }");
             
             return sb.ToString();

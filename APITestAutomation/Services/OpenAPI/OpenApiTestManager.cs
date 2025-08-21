@@ -13,7 +13,7 @@ namespace APITestAutomation.Services.OpenAPI
         public OpenApiTestManager(string configPath = "Config/OpenAPI", string testsPath = "Generated", string reportsPath = "Reports")
         {
             _configPath = Path.Combine(AppContext.BaseDirectory, configPath);
-            _testsPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "APITestAutomationTest", testsPath);
+            _testsPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "APITestAutomationTest", "Generated");
             _reportsPath = Path.Combine(AppContext.BaseDirectory, reportsPath);
             
             Directory.CreateDirectory(_configPath);
@@ -103,16 +103,32 @@ namespace APITestAutomation.Services.OpenAPI
                 return GeneratePreview(spec);
             }
 
-            var className = $"Generated_{spec.Document.Info?.Title?.Replace(" ", "").Replace("-", "") ?? "API"}Tests";
-            var testCode = TestCodeGenerator.GenerateTestClass(spec, tenant, userId, className);
-            
-            // Add helper methods
-            testCode = testCode.Replace("    }", TestCodeGenerator.GenerateHelperMethods() + "\n    }");
-            
-            var fileName = $"{className}.cs";
-            var filePath = Path.Combine(_testsPath, fileName);
-            
-            await File.WriteAllTextAsync(filePath, testCode);
+            // Group endpoints by tags for organized folder structure
+            var endpointsByTag = spec.EndpointTests.Values
+                .GroupBy(e => e.Tags.FirstOrDefault() ?? "General")
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var generatedFiles = new List<string>();
+
+            foreach (var tagGroup in endpointsByTag)
+            {
+                var tag = tagGroup.Key;
+                var endpoints = tagGroup.Value;
+                
+                // Create folder for the tag
+                var tagFolderPath = Path.Combine(_testsPath, tag);
+                Directory.CreateDirectory(tagFolderPath);
+                
+                // Generate test class for this tag
+                var className = $"{tag}Tests";
+                var testCode = TestCodeGenerator.GenerateTestClassByTag(spec, endpoints, tenant, userId, className, tag);
+                
+                var fileName = $"{className}.cs";
+                var filePath = Path.Combine(tagFolderPath, fileName);
+                
+                await File.WriteAllTextAsync(filePath, testCode);
+                generatedFiles.Add(filePath);
+            }
             
             // Update current spec
             var configFile = Path.Combine(_configPath, "current-spec.json");
@@ -140,7 +156,7 @@ namespace APITestAutomation.Services.OpenAPI
             var json = JsonSerializer.Serialize(specForSerialization, jsonOptions);
             await File.WriteAllTextAsync(configFile, json);
             
-            return $"Tests generated successfully at: {filePath}";
+            return $"Tests generated successfully:\n" + string.Join("\n", generatedFiles.Select(f => $"- {f}"));
         }
 
         public async Task<string> GenerateChangeReportAsync(List<TestGenerationChange> changes)
