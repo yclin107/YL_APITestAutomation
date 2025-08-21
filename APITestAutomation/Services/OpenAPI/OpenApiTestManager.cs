@@ -13,7 +13,9 @@ namespace APITestAutomation.Services.OpenAPI
         public OpenApiTestManager(string configPath = "Config/OpenAPI", string testsPath = "Generated", string reportsPath = "Reports")
         {
             _configPath = Path.Combine(AppContext.BaseDirectory, configPath);
-            _testsPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "APITestAutomationTest", "Generated");
+            // Navegar desde APITestAutomation hacia APITestAutomationTest
+            var solutionRoot = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..");
+            _testsPath = Path.Combine(solutionRoot, "APITestAutomationTest", "Generated");
             _reportsPath = Path.Combine(AppContext.BaseDirectory, reportsPath);
             
             Directory.CreateDirectory(_configPath);
