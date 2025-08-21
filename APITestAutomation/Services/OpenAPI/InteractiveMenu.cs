@@ -231,8 +231,12 @@ namespace APITestAutomation.Services.OpenAPI
 
         private string GetSpecificationsDirectory()
         {
-            // Always point to APITestAutomation/Specifications
-            return Path.Combine(AppContext.BaseDirectory, "Specifications");
+            // Always point to APITestAutomation/Specifications from the current project
+            var currentDir = AppContext.BaseDirectory;
+            // Navigate to the APITestAutomation project root, then to Specifications
+            var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
+            var specificationsPath = Path.Combine(projectRoot, "APITestAutomation", "Specifications");
+            return Path.GetFullPath(specificationsPath);
         }
 
         private string GetLastUsedSpecPath()
@@ -258,12 +262,13 @@ namespace APITestAutomation.Services.OpenAPI
             var lastUsed = GetLastUsedSpecPath();
             if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
             {
-                Console.WriteLine($"Last used specification: {Path.GetFileName(lastUsed)}");
-                Console.Write($"Press Enter to use '{Path.GetFileName(lastUsed)}' or type new path: ");
+                Console.WriteLine($"📄 Last used specification: {Path.GetFileName(lastUsed)}");
+                Console.WriteLine($"📂 Path: {lastUsed}");
+                Console.Write($"Press Enter to continue with '{Path.GetFileName(lastUsed)}' or select a different file (b): ");
             }
             else
             {
-                Console.Write("Enter OpenAPI specification file path (or press Enter to browse): ");
+                Console.Write("No previous specification found. Press Enter to browse available files: ");
             }
             
             var input = Console.ReadLine()?.Trim();
@@ -272,8 +277,14 @@ namespace APITestAutomation.Services.OpenAPI
             {
                 if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
                 {
+                    Console.WriteLine($"✅ Using: {Path.GetFileName(lastUsed)}");
                     return lastUsed;
                 }
+                return BrowseSpecificationFiles();
+            }
+
+            if (input.ToLower() == "b")
+            {
                 return BrowseSpecificationFiles();
             }
 

@@ -14,6 +14,7 @@ namespace APITestAutomationTest.StepDefinitions
         private object? _requestBody;
         private object? _response;
         private string _rawResponse = string.Empty;
+        private RestAssured.Response.ValidatableResponse? _validatableResponse;
 
         public void InitializeContext(string tenant, string userId, string baseUrl)
         {
@@ -70,13 +71,12 @@ namespace APITestAutomationTest.StepDefinitions
                     }
                 }
 
-                _response = request
+                _validatableResponse = request
                     .When()
                     .Get($"{_baseUrl}/{finalEndpoint}")
                     .Then();
 
-                _rawResponse = ((RestAssured.Response.ValidatableResponse)_response)
-                    .Extract().Response().Content.ReadAsStringAsync().Result;
+                _rawResponse = _validatableResponse.Extract().Response().Content.ReadAsStringAsync().Result;
 
                 AttachResponse("GetResponse", _rawResponse);
             });
@@ -106,13 +106,12 @@ namespace APITestAutomationTest.StepDefinitions
                     }
                 }
 
-                _response = request
+                _validatableResponse = request
                     .When()
                     .Post($"{_baseUrl}/{finalEndpoint}")
                     .Then();
 
-                _rawResponse = ((RestAssured.Response.ValidatableResponse)_response)
-                    .Extract().Response().Content.ReadAsStringAsync().Result;
+                _rawResponse = _validatableResponse.Extract().Response().Content.ReadAsStringAsync().Result;
 
                 AttachResponse("PostResponse", _rawResponse);
             });
@@ -142,13 +141,12 @@ namespace APITestAutomationTest.StepDefinitions
                     }
                 }
 
-                _response = request
+                _validatableResponse = request
                     .When()
                     .Put($"{_baseUrl}/{finalEndpoint}")
                     .Then();
 
-                _rawResponse = ((RestAssured.Response.ValidatableResponse)_response)
-                    .Extract().Response().Content.ReadAsStringAsync().Result;
+                _rawResponse = _validatableResponse.Extract().Response().Content.ReadAsStringAsync().Result;
 
                 AttachResponse("PutResponse", _rawResponse);
             });
@@ -173,13 +171,12 @@ namespace APITestAutomationTest.StepDefinitions
                     }
                 }
 
-                _response = request
+                _validatableResponse = request
                     .When()
                     .Delete($"{_baseUrl}/{finalEndpoint}")
                     .Then();
 
-                _rawResponse = ((RestAssured.Response.ValidatableResponse)_response)
-                    .Extract().Response().Content.ReadAsStringAsync().Result;
+                _rawResponse = _validatableResponse.Extract().Response().Content.ReadAsStringAsync().Result;
 
                 AttachResponse("DeleteResponse", _rawResponse);
             });
@@ -189,7 +186,7 @@ namespace APITestAutomationTest.StepDefinitions
         {
             AllureApi.Step($"Validate status code is {expectedStatusCode}", () =>
             {
-                ((RestAssured.Response.ValidatableResponse)_response!).StatusCode(expectedStatusCode);
+                _validatableResponse!.StatusCode(expectedStatusCode);
             });
         }
 
@@ -259,7 +256,7 @@ namespace APITestAutomationTest.StepDefinitions
         public void ClearContext()
         {
             _requestBody = null;
-            _response = null;
+            _validatableResponse = null;
             _rawResponse = string.Empty;
         }
     }

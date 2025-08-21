@@ -119,13 +119,16 @@ namespace APITestAutomation.Services.OpenAPI
                 var tag = tagGroup.Key;
                 var endpoints = tagGroup.Value;
                 
+                // Sanitize tag name for folder creation
+                var sanitizedTag = SanitizeForFileSystem(tag);
+                
                 // Create folder for the tag
-                var tagFolderPath = Path.Combine(_testsPath, tag);
+                var tagFolderPath = Path.Combine(_testsPath, sanitizedTag);
                 Directory.CreateDirectory(tagFolderPath);
                 
                 // Generate test class for this tag
-                var className = $"{tag}Tests";
-                var testCode = TestCodeGenerator.GenerateTestClassByTag(spec, endpoints, tenant, userId, className, tag);
+                var className = $"{sanitizedTag}Tests";
+                var testCode = TestCodeGenerator.GenerateTestClassByTag(spec, endpoints, tenant, userId, className, sanitizedTag);
                 
                 var fileName = $"{className}.cs";
                 var filePath = Path.Combine(tagFolderPath, fileName);
@@ -183,6 +186,43 @@ namespace APITestAutomation.Services.OpenAPI
             return $"Tests generated successfully:\n" + string.Join("\n", generatedFiles.Select(f => $"- {f}"));
         }
 
+        private static string SanitizeForFileSystem(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return "General";
+
+            // Remove invalid file system characters
+            var invalidChars = Path.GetInvalidFileNameChars().Concat(Path.GetInvalidPathChars()).ToArray();
+            var sanitized = name;
+            
+            foreach (var invalidChar in invalidChars)
+            {
+                sanitized = sanitized.Replace(invalidChar, '_');
+            }
+
+            // Replace spaces and other problematic characters
+            sanitized = sanitized
+                .Replace(" ", "_")
+                .Replace("-", "_")
+                .Replace(".", "_");
+
+            // Remove consecutive underscores
+            while (sanitized.Contains("__"))
+            {
+                sanitized = sanitized.Replace("__", "_");
+            }
+
+            // Remove leading/trailing underscores
+            sanitized = sanitized.Trim('_');
+
+            // Ensure it's not empty
+            if (string.IsNullOrEmpty(sanitized))
+            {
+                sanitized = "General";
+            }
+
+            return sanitized;
+        }
         public async Task<string> GenerateChangeReportAsync(List<TestGenerationChange> changes)
         {
             var reportPath = Path.Combine(_reportsPath, $"change-report-{DateTime.Now:yyyyMMdd-HHmmss}.json");

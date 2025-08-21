@@ -10,6 +10,10 @@ namespace APITestAutomation.Services.OpenAPI
         {
             var sb = new StringBuilder();
             
+            // Sanitize class name and tag
+            var sanitizedClassName = SanitizeIdentifier(className);
+            var sanitizedTag = SanitizeIdentifier(tag);
+            
             // Generate using statements following the existing pattern
             sb.AppendLine("using Allure.Net.Commons;");
             sb.AppendLine("using Allure.NUnit.Attributes;");
@@ -21,11 +25,11 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine();
 
             // Generate namespace and class following the existing pattern
-            sb.AppendLine($"namespace APITestAutomationTest.Generated.{tag}");
+            sb.AppendLine($"namespace APITestAutomationTest.Generated.{sanitizedTag}");
             sb.AppendLine("{");
             sb.AppendLine("    [TestFixture]");
-            sb.AppendLine($"    [AllureFeature(\"{tag} API Tests\")]");
-            sb.AppendLine($"    public class {className} : TestBase");
+            sb.AppendLine($"    [AllureFeature(\"{sanitizedTag} API Tests\")]");
+            sb.AppendLine($"    public class {sanitizedClassName} : TestBase");
             sb.AppendLine("    {");
             sb.AppendLine($"        private readonly string _baseUrl = \"{spec.BaseUrl}\";");
             sb.AppendLine($"        private readonly string _tenant = \"{tenant}\";");
@@ -35,7 +39,7 @@ namespace APITestAutomation.Services.OpenAPI
             // Generate test methods for each endpoint
             foreach (var endpoint in endpoints)
             {
-                GenerateEndpointTestsWithAllurePattern(sb, endpoint, spec);
+                GenerateEndpointTestsWithAllurePattern(sb, endpoint, spec, sanitizedTag);
             }
 
             // Add helper methods
@@ -47,29 +51,28 @@ namespace APITestAutomation.Services.OpenAPI
             return sb.ToString();
         }
 
-        private static void GenerateEndpointTestsWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
+        private static void GenerateEndpointTestsWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec, string sanitizedTag)
         {
-            var methodName = SanitizeMethodName(endpoint.OperationId);
-            var tag = endpoint.Tags.FirstOrDefault() ?? "General";
+            var methodName = SanitizeIdentifier(endpoint.OperationId);
             
             // Generate positive test following the existing pattern
-            GeneratePositiveTestWithAllurePattern(sb, endpoint, methodName, tag);
+            GeneratePositiveTestWithAllurePattern(sb, endpoint, methodName, sanitizedTag);
             
             // Generate negative tests
             if (endpoint.RequiresAuth)
             {
-                GenerateUnauthorizedTestWithAllurePattern(sb, endpoint, methodName, tag);
+                GenerateUnauthorizedTestWithAllurePattern(sb, endpoint, methodName, sanitizedTag);
             }
             
             if (endpoint.Parameters.Any(p => p.Required))
             {
-                GenerateMissingRequiredParametersTestWithAllurePattern(sb, endpoint, methodName, tag);
+                GenerateMissingRequiredParametersTestWithAllurePattern(sb, endpoint, methodName, sanitizedTag);
             }
             
             // Generate schema validation test if response has schema
             if (endpoint.Responses.ContainsKey("200") || endpoint.Responses.ContainsKey("201"))
             {
-                GenerateSchemaValidationTestWithAllurePattern(sb, endpoint, methodName, tag);
+                GenerateSchemaValidationTestWithAllurePattern(sb, endpoint, methodName, sanitizedTag);
             }
         }
 
@@ -369,9 +372,68 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine();
         }
 
-        private static string SanitizeMethodName(string operationId)
+        private static string SanitizeIdentifier(string identifier)
         {
-            return operationId.Replace("-", "_").Replace(" ", "_").Replace(".", "_");
+            if (string.IsNullOrEmpty(identifier))
+                return "Unknown";
+                
+            // Remove or replace invalid characters for C# identifiers
+            var sanitized = identifier
+                .Replace("-", "_")
+                .Replace(" ", "_")
+                .Replace(".", "_")
+                .Replace("/", "_")
+                .Replace("\\", "_")
+                .Replace("(", "_")
+                .Replace(")", "_")
+                .Replace("[", "_")
+                .Replace("]", "_")
+                .Replace("{", "_")
+                .Replace("}", "_")
+                .Replace("<", "_")
+                .Replace(">", "_")
+                .Replace(":", "_")
+                .Replace(";", "_")
+                .Replace(",", "_")
+                .Replace("?", "_")
+                .Replace("!", "_")
+                .Replace("@", "_")
+                .Replace("#", "_")
+                .Replace("$", "_")
+                .Replace("%", "_")
+                .Replace("^", "_")
+                .Replace("&", "_")
+                .Replace("*", "_")
+                .Replace("+", "_")
+                .Replace("=", "_")
+                .Replace("|", "_")
+                .Replace("~", "_")
+                .Replace("`", "_")
+                .Replace("'", "_")
+                .Replace("\"", "_");
+
+            // Remove consecutive underscores
+            while (sanitized.Contains("__"))
+            {
+                sanitized = sanitized.Replace("__", "_");
+            }
+
+            // Remove leading/trailing underscores
+            sanitized = sanitized.Trim('_');
+
+            // Ensure it starts with a letter or underscore (valid C# identifier)
+            if (!char.IsLetter(sanitized[0]) && sanitized[0] != '_')
+            {
+                sanitized = "_" + sanitized;
+            }
+
+            // Ensure it's not empty
+            if (string.IsNullOrEmpty(sanitized))
+            {
+                sanitized = "Unknown";
+            }
+
+            return sanitized;
         }
 
         private static string GetDefaultTenant()
