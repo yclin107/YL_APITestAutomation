@@ -48,15 +48,16 @@ namespace APITestAutomation.Services.OpenAPI
 
         private async Task HandleGenerateCommand(string[] args)
         {
-            if (args.Length < 4)
+            if (args.Length < 2)
             {
-                Console.WriteLine("Usage: generate <spec-path> <tenant> <user-id> [base-url]");
+                Console.WriteLine("Usage: generate <spec-path> [tenant] [user-id] [base-url]");
+                Console.WriteLine("If tenant and user-id are not provided, you'll be prompted to select them.");
                 return;
             }
 
             var specPath = args[1];
-            var tenant = args[2];
-            var userId = args[3];
+            var tenant = args.Length > 2 ? args[2] : await PromptForTenant();
+            var userId = args.Length > 3 ? args[3] : await PromptForUser(tenant);
             var baseUrl = args.Length > 4 ? args[4] : null;
 
             Console.WriteLine("Loading OpenAPI specification...");
@@ -108,15 +109,15 @@ namespace APITestAutomation.Services.OpenAPI
 
         private async Task HandlePreviewCommand(string[] args)
         {
-            if (args.Length < 4)
+            if (args.Length < 2)
             {
-                Console.WriteLine("Usage: preview <spec-path> <tenant> <user-id> [base-url]");
+                Console.WriteLine("Usage: preview <spec-path> [tenant] [user-id] [base-url]");
                 return;
             }
 
             var specPath = args[1];
-            var tenant = args[2];
-            var userId = args[3];
+            var tenant = args.Length > 2 ? args[2] : await PromptForTenant();
+            var userId = args.Length > 3 ? args[3] : await PromptForUser(tenant);
             var baseUrl = args.Length > 4 ? args[4] : null;
 
             Console.WriteLine("Loading OpenAPI specification...");
@@ -141,6 +142,14 @@ Examples:
   generate swagger.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser0
   detect api-spec.yaml https://api.example.com
   preview openapi.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser1 https://api.example.com
+
+Available Tenants and Users:
+  - ptpd68r3nke7q5pnutzaaw: PPSAutoTestUser0, PPSAutoTestUser1, PPSAutoTestUser2
+  - q7v1n2oexe2yohe1ttb9yq: PPSAutoTestUser0, PPSAutoTestUser1, PPSAutoTestUser2
+
+You can also run without specifying tenant/user and you'll be prompted to select them:
+  generate swagger.json
+  preview openapi.json
 ");
         }
     }
