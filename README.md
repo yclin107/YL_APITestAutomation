@@ -116,9 +116,12 @@ The framework uses encrypted JSON profiles to manage tenant configurations and u
 
 #### Running Tests
 ```bash
-# Set profile and run tests
-TEST_PROFILE=dev-profile dotnet test
+# Set profile path (team/environment/tenantId) and run tests
+$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test
 
 # With master password for encrypted profiles
-MASTER_PASSWORD=your-master-password TEST_PROFILE=dev-profile dotnet test
+$env:MASTER_PASSWORD="admin"; $env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test
+
+# Parallel execution with 4 threads
+$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test --parallel 4
 ```
