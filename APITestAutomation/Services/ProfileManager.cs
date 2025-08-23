@@ -17,7 +17,7 @@ namespace APITestAutomation.Services
             var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
             _profilesPath = Path.Combine(solutionRoot, "APITestAutomationTest", "Profiles");
             _configPath = Path.Combine(AppContext.BaseDirectory, "Config", "profiles-config.json");
-            
+
             // Ensure the profiles directory exists
             var fullProfilesPath = Path.GetFullPath(_profilesPath);
             Directory.CreateDirectory(fullProfilesPath);
@@ -27,7 +27,7 @@ namespace APITestAutomation.Services
         public async Task<List<string>> GetAvailableProfilesAsync()
         {
             var profiles = new List<string>();
-            
+
             if (!Directory.Exists(_profilesPath))
                 return profiles;
 
@@ -44,7 +44,7 @@ namespace APITestAutomation.Services
                     }
                 }
             }
-            
+
             return profiles;
         }
 
@@ -55,13 +55,13 @@ namespace APITestAutomation.Services
                 return null;
 
             var content = await File.ReadAllTextAsync(filePath);
-            
+
             // Check if file is encrypted
             if (IsEncrypted(content))
             {
                 if (string.IsNullOrEmpty(masterPassword))
                     throw new InvalidOperationException("Profile is encrypted but no master password provided");
-                
+
                 content = DecryptContent(content, masterPassword);
             }
 
@@ -71,7 +71,7 @@ namespace APITestAutomation.Services
         public async Task SaveProfileAsync(TenantProfile profile, string team, string environment, string tenantId, string? masterPassword = null)
         {
             var content = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
-            
+
             if (!string.IsNullOrEmpty(masterPassword))
             {
                 content = EncryptContent(content, masterPassword);
@@ -79,7 +79,7 @@ namespace APITestAutomation.Services
 
             var dirPath = Path.Combine(_profilesPath, team, environment);
             Directory.CreateDirectory(dirPath);
-            
+
             var filePath = Path.Combine(dirPath, $"{tenantId}.json");
             await File.WriteAllTextAsync(filePath, content);
         }
@@ -88,7 +88,7 @@ namespace APITestAutomation.Services
         {
             if (!Directory.Exists(_profilesPath))
                 return;
-            
+
             foreach (var teamDir in Directory.GetDirectories(_profilesPath))
             {
                 var teamName = Path.GetFileName(teamDir);
@@ -113,7 +113,7 @@ namespace APITestAutomation.Services
         {
             if (!Directory.Exists(_profilesPath))
                 return;
-            
+
             foreach (var teamDir in Directory.GetDirectories(_profilesPath))
             {
                 var teamName = Path.GetFileName(teamDir);
@@ -136,7 +136,6 @@ namespace APITestAutomation.Services
                         {
                             Console.WriteLine($"❌ Failed to decrypt {teamName}/{envName}/{tenantId}: {ex.Message}");
                         }
-                    }
                     }
                 }
             }
@@ -203,7 +202,7 @@ namespace APITestAutomation.Services
         private string DecryptContent(string encryptedContent, string password)
         {
             var encryptedBytes = Convert.FromBase64String(encryptedContent);
-            
+
             using var aes = Aes.Create();
             var key = GenerateKey(password);
             aes.Key = key;
@@ -219,7 +218,7 @@ namespace APITestAutomation.Services
 
             using var decryptor = aes.CreateDecryptor();
             var decryptedBytes = decryptor.TransformFinalBlock(encrypted, 0, encrypted.Length);
-            
+
             return Encoding.UTF8.GetString(decryptedBytes);
         }
 
