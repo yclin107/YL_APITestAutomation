@@ -1,16 +1,13 @@
-using APITestAutomation.Services.OpenAPI;
-using APITestAutomation.Services;
 using System.Diagnostics;
-using System.Text;
 
 namespace APITestAutomation.Services.OpenAPI
 {
-    public class InteractiveMenu
+    public class InteractiveMenuWithArrows
     {
         private readonly OpenApiTestManager _manager;
         private readonly ProfileManager _profileManager;
 
-        public InteractiveMenu()
+        public InteractiveMenuWithArrows()
         {
             _manager = new OpenApiTestManager();
             _profileManager = new ProfileManager();
@@ -20,57 +17,86 @@ namespace APITestAutomation.Services.OpenAPI
         {
             while (true)
             {
-                Console.Clear();
-                ShowHeader();
-                ShowMainMenu();
+                var mainOptions = new[]
+                {
+                    "🧪 Run Tests",
+                    "📊 Generate Allure Report", 
+                    "🤖 Auto Generate Tests",
+                    "👤 Profile Management",
+                    "🚪 Exit"
+                };
 
-                var choice = Console.ReadLine()?.Trim();
+                var choice = ShowMenuWithArrows("Elite Test Generator - API Test Automation", mainOptions);
 
                 switch (choice)
                 {
-                    case "1":
+                    case 0: // Run Tests
                         await HandleRunTests();
                         break;
-                    case "2":
+                    case 1: // Generate Report
                         await HandleGenerateReport();
                         break;
-                    case "3":
+                    case 2: // Auto Generate Tests
                         await HandleAutoGenerateTests();
                         break;
-                    case "4":
+                    case 3: // Profile Management
                         await HandleProfileManagement();
                         break;
-                    case "5":
+                    case 4: // Exit
                         Console.WriteLine("Goodbye!");
                         return;
-                    default:
-                        Console.WriteLine("Invalid option. Press any key to continue...");
-                        Console.ReadKey();
-                        break;
                 }
             }
         }
 
-        private void ShowHeader()
+        private int ShowMenuWithArrows(string title, string[] options)
         {
-            Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║                    Elite Test Generator                      ║");
-            Console.WriteLine("║                     API Test Automation                      ║");
-            Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
-            Console.WriteLine();
-        }
+            int selectedIndex = 0;
+            ConsoleKey key;
 
-        private void ShowMainMenu()
-        {
-            Console.WriteLine("Please select an option:");
-            Console.WriteLine();
-            Console.WriteLine("1. 🧪 Run Tests");
-            Console.WriteLine("2. 📊 Generate Allure Report");
-            Console.WriteLine("3. 🤖 Auto Generate Tests");
-            Console.WriteLine("4. 👤 Profile Management");
-            Console.WriteLine("5. 🚪 Exit");
-            Console.WriteLine();
-            Console.Write("Enter your choice (1-5): ");
+            do
+            {
+                Console.Clear();
+                
+                // Show header
+                Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
+                Console.WriteLine($"║{title.PadLeft((64 + title.Length) / 2).PadRight(62)}║");
+                Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
+                Console.WriteLine();
+
+                // Show options
+                for (int i = 0; i < options.Length; i++)
+                {
+                    if (i == selectedIndex)
+                    {
+                        Console.BackgroundColor = ConsoleColor.Gray;
+                        Console.ForegroundColor = ConsoleColor.Black;
+                        Console.WriteLine($" ► {options[i]} ");
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        Console.WriteLine($"   {options[i]}");
+                    }
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("Use ↑↓ arrows to navigate, Enter to select");
+
+                key = Console.ReadKey(true).Key;
+
+                switch (key)
+                {
+                    case ConsoleKey.UpArrow:
+                        selectedIndex = selectedIndex == 0 ? options.Length - 1 : selectedIndex - 1;
+                        break;
+                    case ConsoleKey.DownArrow:
+                        selectedIndex = selectedIndex == options.Length - 1 ? 0 : selectedIndex + 1;
+                        break;
+                }
+            } while (key != ConsoleKey.Enter);
+
+            return selectedIndex;
         }
 
         private async Task HandleRunTests()
@@ -83,26 +109,15 @@ namespace APITestAutomation.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("❌ No profiles found. Please create a profile first.");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomation", "Profiles"))}");
                 PauseForUser();
                 return;
             }
 
-            Console.WriteLine("Available profiles:");
-            for (int i = 0; i < profiles.Count; i++)
-            {
-                Console.WriteLine($"{i + 1}. {profiles[i]}");
-            }
-
-            Console.Write($"Select profile (1-{profiles.Count}): ");
-            if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 1 || choice > profiles.Count)
-            {
-                Console.WriteLine("❌ Invalid selection.");
-                PauseForUser();
-                return;
-            }
-
-            var selectedProfile = profiles[choice - 1];
+            var selectedProfileIndex = ShowMenuWithArrows("Select Profile", profiles.ToArray());
+            var selectedProfile = profiles[selectedProfileIndex];
             
+            Console.Clear();
             Console.Write("Enter number of parallel threads (default: 1): ");
             var threadsInput = Console.ReadLine()?.Trim();
             var threads = string.IsNullOrEmpty(threadsInput) ? 1 : int.Parse(threadsInput);
@@ -117,7 +132,8 @@ namespace APITestAutomation.Services.OpenAPI
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "dotnet",
-                        Arguments = $"test --logger:allure --parallel {threads}" + 
+                        Arguments = $"test --logger:allure" + 
+                                   (threads > 1 ? $" --parallel {threads}" : "") +
                                    (string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\""),
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -129,7 +145,7 @@ namespace APITestAutomation.Services.OpenAPI
                 process.StartInfo.Environment["TEST_PROFILE"] = selectedProfile;
                 
                 Console.WriteLine($"🚀 Running tests with profile: {selectedProfile}");
-                Console.WriteLine($"⚡ Parallel threads: {threads}");
+                if (threads > 1) Console.WriteLine($"⚡ Parallel threads: {threads}");
                 Console.WriteLine();
 
                 process.Start();
@@ -162,17 +178,56 @@ namespace APITestAutomation.Services.OpenAPI
             Console.WriteLine("=== Generate Allure Report ===");
             Console.WriteLine();
 
+            var allureResultsPath = Path.Combine(GetSolutionRoot(), "allure-results");
+            
+            if (!Directory.Exists(allureResultsPath))
+            {
+                Console.WriteLine("❌ No allure-results directory found. Please run tests first.");
+                PauseForUser();
+                return;
+            }
+
             try
             {
+                // Check if allure is installed
+                var checkProcess = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "allure",
+                        Arguments = "--version",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    }
+                };
+
+                try
+                {
+                    checkProcess.Start();
+                    await checkProcess.WaitForExitAsync();
+                }
+                catch
+                {
+                    Console.WriteLine("❌ Allure is not installed or not in PATH.");
+                    Console.WriteLine("Please install Allure:");
+                    Console.WriteLine("  npm install -g allure-commandline");
+                    Console.WriteLine("  or download from: https://docs.qameta.io/allure/#_installing_a_commandline");
+                    PauseForUser();
+                    return;
+                }
+
                 var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "allure",
-                        Arguments = "serve allure-results",
+                        Arguments = $"serve \"{allureResultsPath}\"",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
-                        RedirectStandardError = true
+                        RedirectStandardError = true,
+                        WorkingDirectory = GetSolutionRoot()
                     }
                 };
 
@@ -191,85 +246,71 @@ namespace APITestAutomation.Services.OpenAPI
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error generating report: {ex.Message}");
-                Console.WriteLine("Make sure Allure is installed: npm install -g allure-commandline");
-                PauseForUser();
             }
         }
 
         private async Task HandleAutoGenerateTests()
         {
+            var options = new[]
+            {
+                "🚀 Generate Tests from OpenAPI Specification",
+                "🔍 Detect Changes in Specification",
+                "👁️ Preview Tests (without generating)",
+                "📁 Show Available Specification Files",
+                "🔙 Back to Main Menu"
+            };
+
             while (true)
             {
-                Console.Clear();
-                Console.WriteLine("=== Auto Generate Tests ===");
-                Console.WriteLine();
-                Console.WriteLine("1. 🚀 Generate Tests from OpenAPI Specification");
-                Console.WriteLine("2. 🔍 Detect Changes in Specification");
-                Console.WriteLine("3. 👁️  Preview Tests (without generating)");
-                Console.WriteLine("4. 📁 Show Available Specification Files");
-                Console.WriteLine("5. 🔙 Back to Main Menu");
-                Console.WriteLine();
-                Console.Write("Enter your choice (1-5): ");
-
-                var choice = Console.ReadLine()?.Trim();
+                var choice = ShowMenuWithArrows("Auto Generate Tests", options);
 
                 switch (choice)
                 {
-                    case "1":
+                    case 0:
                         await HandleGenerateFlow();
                         break;
-                    case "2":
+                    case 1:
                         await HandleDetectFlow();
                         break;
-                    case "3":
+                    case 2:
                         await HandlePreviewFlow();
                         break;
-                    case "4":
+                    case 3:
                         ShowSpecificationFiles();
                         break;
-                    case "5":
+                    case 4:
                         return;
-                    default:
-                        Console.WriteLine("Invalid option. Press any key to continue...");
-                        Console.ReadKey();
-                        break;
                 }
             }
         }
 
         private async Task HandleProfileManagement()
         {
+            var options = new[]
+            {
+                "📋 Show Available Profiles",
+                "🔒 Encrypt All Profiles", 
+                "🔓 Decrypt All Profiles",
+                "🔙 Back to Main Menu"
+            };
+
             while (true)
             {
-                Console.Clear();
-                Console.WriteLine("=== Profile Management ===");
-                Console.WriteLine();
-                Console.WriteLine("1. 📋 Show Available Profiles");
-                Console.WriteLine("2. 🔒 Encrypt All Profiles");
-                Console.WriteLine("3. 🔓 Decrypt All Profiles");
-                Console.WriteLine("4. 🔙 Back to Main Menu");
-                Console.WriteLine();
-                Console.Write("Enter your choice (1-4): ");
-
-                var choice = Console.ReadLine()?.Trim();
+                var choice = ShowMenuWithArrows("Profile Management", options);
 
                 switch (choice)
                 {
-                    case "1":
+                    case 0:
                         await ShowProfiles();
                         break;
-                    case "2":
+                    case 1:
                         await EncryptProfiles();
                         break;
-                    case "3":
+                    case 2:
                         await DecryptProfiles();
                         break;
-                    case "4":
+                    case 3:
                         return;
-                    default:
-                        Console.WriteLine("Invalid option. Press any key to continue...");
-                        Console.ReadKey();
-                        break;
                 }
             }
         }
@@ -284,6 +325,7 @@ namespace APITestAutomation.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("No profiles found.");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomation", "Profiles"))}");
             }
             else
             {
@@ -344,29 +386,7 @@ namespace APITestAutomation.Services.OpenAPI
             PauseForUser();
         }
 
-        private string ReadPassword()
-        {
-            var password = new StringBuilder();
-            ConsoleKeyInfo key;
-
-            do
-            {
-                key = Console.ReadKey(true);
-                if (key.Key != ConsoleKey.Backspace && key.Key != ConsoleKey.Enter)
-                {
-                    password.Append(key.KeyChar);
-                    Console.Write("*");
-                }
-                else if (key.Key == ConsoleKey.Backspace && password.Length > 0)
-                {
-                    password.Remove(password.Length - 1, 1);
-                    Console.Write("\b \b");
-                }
-            } while (key.Key != ConsoleKey.Enter);
-
-            return password.ToString();
-        }
-
+        // Copy all the other methods from InteractiveMenu.cs
         private async Task HandleGenerateFlow()
         {
             Console.Clear();
@@ -376,15 +396,13 @@ namespace APITestAutomation.Services.OpenAPI
             var specPath = GetSpecificationPath();
             if (string.IsNullOrEmpty(specPath)) return;
 
-            var baseUrl = GetBaseUrl();
-
             try
             {
                 Console.WriteLine("Loading OpenAPI specification...");
-                var spec = await _manager.LoadSpecificationAsync(specPath, baseUrl);
+                var spec = await _manager.LoadSpecificationAsync(specPath);
 
                 Console.WriteLine("Detecting changes...");
-                var changes = await _manager.DetectChangesAsync(specPath, baseUrl);
+                var changes = await _manager.DetectChangesAsync(specPath);
 
                 if (changes.Any())
                 {
@@ -430,12 +448,10 @@ namespace APITestAutomation.Services.OpenAPI
             var specPath = GetSpecificationPath();
             if (string.IsNullOrEmpty(specPath)) return;
 
-            var baseUrl = GetBaseUrl();
-
             try
             {
                 Console.WriteLine("Detecting changes...");
-                var changes = await _manager.DetectChangesAsync(specPath, baseUrl);
+                var changes = await _manager.DetectChangesAsync(specPath);
 
                 Console.WriteLine();
                 Console.WriteLine(_manager.FormatChangeSummary(changes));
@@ -456,7 +472,6 @@ namespace APITestAutomation.Services.OpenAPI
 
             var specPath = GetSpecificationPath();
             if (string.IsNullOrEmpty(specPath)) return;
-
 
             try
             {
@@ -540,11 +555,32 @@ namespace APITestAutomation.Services.OpenAPI
             PauseForUser();
         }
 
+        private string ReadPassword()
+        {
+            var password = new System.Text.StringBuilder();
+            ConsoleKeyInfo key;
+
+            do
+            {
+                key = Console.ReadKey(true);
+                if (key.Key != ConsoleKey.Backspace && key.Key != ConsoleKey.Enter)
+                {
+                    password.Append(key.KeyChar);
+                    Console.Write("*");
+                }
+                else if (key.Key == ConsoleKey.Backspace && password.Length > 0)
+                {
+                    password.Remove(password.Length - 1, 1);
+                    Console.Write("\b \b");
+                }
+            } while (key.Key != ConsoleKey.Enter);
+
+            return password.ToString();
+        }
+
         private string GetSpecificationsDirectory()
         {
-            // Always point to APITestAutomation/Specifications from the current project
             var currentDir = AppContext.BaseDirectory;
-            // Navigate to the APITestAutomation project root, then to Specifications
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
             var specificationsPath = Path.Combine(projectRoot, "APITestAutomation", "Specifications");
             return Path.GetFullPath(specificationsPath);
@@ -558,67 +594,14 @@ namespace APITestAutomation.Services.OpenAPI
             return Path.GetFullPath(testProjectPath);
         }
 
-        private string GetLastUsedSpecPath()
+        private string GetSolutionRoot()
         {
-            var configPath = Path.Combine(AppContext.BaseDirectory, "Config", "OpenAPI", "last-used-spec.txt");
-            if (File.Exists(configPath))
-            {
-                return File.ReadAllText(configPath).Trim();
-            }
-            return string.Empty;
-        }
-
-        private void SaveLastUsedSpecPath(string specPath)
-        {
-            var configDir = Path.Combine(AppContext.BaseDirectory, "Config", "OpenAPI");
-            Directory.CreateDirectory(configDir);
-            var configPath = Path.Combine(configDir, "last-used-spec.txt");
-            File.WriteAllText(configPath, specPath);
+            var currentDir = AppContext.BaseDirectory;
+            var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
+            return Path.GetFullPath(solutionRoot);
         }
 
         private string GetSpecificationPath()
-        {
-            var lastUsed = GetLastUsedSpecPath();
-            if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
-            {
-                Console.WriteLine($"📄 Last used specification: {Path.GetFileName(lastUsed)}");
-                Console.WriteLine($"📂 Path: {lastUsed}");
-                Console.Write($"Press Enter to continue with '{Path.GetFileName(lastUsed)}' or select a different file (b): ");
-            }
-            else
-            {
-                Console.Write("No previous specification found. Press Enter to browse available files: ");
-            }
-            
-            var input = Console.ReadLine()?.Trim();
-
-            if (string.IsNullOrEmpty(input))
-            {
-                if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
-                {
-                    Console.WriteLine($"✅ Using: {Path.GetFileName(lastUsed)}");
-                    return lastUsed;
-                }
-                return BrowseSpecificationFiles();
-            }
-
-            if (input.ToLower() == "b")
-            {
-                return BrowseSpecificationFiles();
-            }
-
-            if (!File.Exists(input))
-            {
-                Console.WriteLine($"❌ File not found: {input}");
-                PauseForUser();
-                return string.Empty;
-            }
-
-            SaveLastUsedSpecPath(input);
-            return input;
-        }
-
-        private string BrowseSpecificationFiles()
         {
             var specDir = GetSpecificationsDirectory();
             if (!Directory.Exists(specDir))
@@ -639,23 +622,10 @@ namespace APITestAutomation.Services.OpenAPI
                 return string.Empty;
             }
 
-            Console.WriteLine();
-            Console.WriteLine("Available files:");
-            for (int i = 0; i < files.Count; i++)
-            {
-                Console.WriteLine($"{i + 1}. {Path.GetFileName(files[i])}");
-            }
-
-            Console.Write($"Select file (1-{files.Count}): ");
-            if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= files.Count)
-            {
-                var selectedPath = files[choice - 1];
-                SaveLastUsedSpecPath(selectedPath);
-                return selectedPath;
-            }
-
-            Console.WriteLine("❌ Invalid selection.");
-            return string.Empty;
+            var fileNames = files.Select(Path.GetFileName).ToArray();
+            var selectedIndex = ShowMenuWithArrows("Select Specification File", fileNames);
+            
+            return files[selectedIndex];
         }
 
         private void PauseForUser()

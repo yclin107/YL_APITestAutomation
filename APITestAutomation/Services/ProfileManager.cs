@@ -12,9 +12,15 @@ namespace APITestAutomation.Services
 
         public ProfileManager()
         {
-            _profilesPath = Path.Combine(AppContext.BaseDirectory, "Profiles");
+            // Get the solution root directory
+            var currentDir = AppContext.BaseDirectory;
+            var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
+            _profilesPath = Path.Combine(solutionRoot, "APITestAutomation", "Profiles");
             _configPath = Path.Combine(AppContext.BaseDirectory, "Config", "profiles-config.json");
-            Directory.CreateDirectory(_profilesPath);
+            
+            // Ensure the profiles directory exists
+            var fullProfilesPath = Path.GetFullPath(_profilesPath);
+            Directory.CreateDirectory(fullProfilesPath);
             Directory.CreateDirectory(Path.GetDirectoryName(_configPath)!);
         }
 

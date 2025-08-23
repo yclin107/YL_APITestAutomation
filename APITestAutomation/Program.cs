@@ -6,10 +6,10 @@ namespace APITestAutomation
     {
         static async Task Main(string[] args)
         {
-            if (args.Length == 0 || (args.Length == 1 && args[0] == "menu"))
+            if (args.Length == 0)
             {
                 // Show interactive menu
-                var menu = new InteractiveMenu();
+                var menu = new InteractiveMenuWithArrows();
                 await menu.ShowMenuAsync();
             }
             else

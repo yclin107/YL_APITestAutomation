@@ -22,7 +22,9 @@ This framework now includes an automatic test generator based on OpenAPI (Swagge
 
 #### Interactive Menu
 ```bash
-dotnet menu
+npm run menu
+# or
+dotnet run --project APITestAutomation
 ```
 
 #### Direct Commands
