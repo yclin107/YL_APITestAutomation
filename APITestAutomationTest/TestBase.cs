@@ -89,11 +89,11 @@ namespace APITestAutomationTest
         protected string GetAuthToken(TestContext context)
         {
             return APITestAutomationServices.Authentications.TokenService.PPSProformaToken(
-                context.Profile.TenantId, 
+                context.TenantId, 
                 new APITestAutomation.Helpers.ConfigSetup.UserConfig
                 {
-                    LoginId = context.User.Username,
-                    Username = context.User.LoginId,
+                    LoginId = context.User.LoginId,
+                    Username = context.User.Username,
                     FirstName = context.User.FirstName,
                     LastName = context.User.LastName,
                     PasswordEnvVar = context.User.Password,

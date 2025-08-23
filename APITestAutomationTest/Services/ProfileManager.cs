@@ -31,12 +31,22 @@ namespace APITestAutomationTest.Services
                 content = DecryptContent(content, masterPassword);
             }
 
-            return JsonSerializer.Deserialize<TenantProfile>(content);
+            var options = new JsonSerializerOptions 
+            { 
+                PropertyNameCaseInsensitive = true,
+                WriteIndented = true
+            };
+            return JsonSerializer.Deserialize<TenantProfile>(content, options);
         }
 
         public async Task SaveProfileAsync(TenantProfile profile, string team, string environment, string tenantId, string? masterPassword = null)
         {
-            var content = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
+            var options = new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNameCaseInsensitive = true
+            };
+            var content = JsonSerializer.Serialize(profile, options);
             
             if (!string.IsNullOrEmpty(masterPassword))
             {
@@ -76,17 +86,17 @@ namespace APITestAutomationTest.Services
 
         public UserProfile GetRandomUser(TenantProfile profile)
         {
-            if (!profile.Users.Any())
+            if (!profile.Users.Users.Any())
                 throw new InvalidOperationException("No users available in profile");
 
             var random = new Random();
-            var users = profile.Users.Values.ToList();
+            var users = profile.Users.Users.Values.ToList();
             return users[random.Next(users.Count)];
         }
 
         public List<UserProfile> GetUsersForParallelExecution(TenantProfile profile, int threadCount)
         {
-            var users = profile.Users.Values.ToList();
+            var users = profile.Users.Users.Values.ToList();
             if (users.Count < threadCount)
             {
                 // If we don't have enough users, repeat users

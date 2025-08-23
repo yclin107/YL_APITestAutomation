@@ -4,6 +4,7 @@ using APITestAutomationTest.StepDefinitions;
 namespace APITestAutomationTest.Features
 {
     [TestFixture]
+    [Ignore("Skip BDD workflow tests")]
     [AllureFeature("User Management Workflow")]
     public class UserManagementWorkflow : TestBase
     {

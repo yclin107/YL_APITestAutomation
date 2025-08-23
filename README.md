@@ -130,12 +130,12 @@ APITestAutomationTest/Profiles/
 
 #### Running Tests
 ```bash
-# Set profile path (team/environment/tenantId) and run tests
-$env:TEST_PROFILE="3E-Proforma/dev/tenant1"; dotnet test
+# With encrypted profiles (auto-decrypts before running)
+$env:MASTER_PASSWORD="admin"; $env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test
 
-# With master password for encrypted profiles
-$env:MASTER_PASSWORD="admin"; $env:TEST_PROFILE="3E-Proforma/dev/tenant1"; dotnet test
+# With decrypted profiles
+$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test
 
 # Parallel execution with 4 threads
-$env:TEST_PROFILE="3E-Proforma/dev/tenant1"; dotnet test --parallel 4
+$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test --parallel 4
 ```

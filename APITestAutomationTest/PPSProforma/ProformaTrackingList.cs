@@ -129,7 +129,7 @@ namespace APITestAutomationTest.PPSProforma
                 Assert.Multiple(() =>
                 {
                     Assert.That(proformaTrackingListResponse.ListFilter.TimekeeperNumbers.Contains(context.User.DefaultTimekeeperNumber), $"Timekeeper number is different than {context.User.DefaultTimekeeperNumber}");
-                    Assert.That(proformaTrackingListResponse.ListResponse.Proformas.All(p => p.BillingTimekeeperNumber == user.DefaultTimekeeperNumber),
+                    Assert.That(proformaTrackingListResponse.ListResponse.Proformas.All(p => p.BillingTimekeeperNumber == context.User.DefaultTimekeeperNumber),
                        $"Not all proformas have the expected TimeKeeperNumber {context.User.DefaultTimekeeperNumber}");
                 });
             });
