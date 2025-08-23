@@ -1,6 +1,7 @@
 using APITestAutomation.Models.OpenAPI;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Net;
 
 namespace APITestAutomation.Services.OpenAPI
 {
@@ -18,6 +19,7 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine("using Allure.Net.Commons;");
             sb.AppendLine("using Allure.NUnit.Attributes;");
             sb.AppendLine("using APITestAutomation.Helpers;");
+            sb.AppendLine("using System.Net;");
             sb.AppendLine("using System.Text.Json;");
             sb.AppendLine("using static RestAssured.Dsl;");
             sb.AppendLine("using Newtonsoft.Json.Schema;");
@@ -31,15 +33,12 @@ namespace APITestAutomation.Services.OpenAPI
             sb.AppendLine($"    [AllureFeature(\"{sanitizedTag} API Tests\")]");
             sb.AppendLine($"    public class {sanitizedClassName} : TestBase");
             sb.AppendLine("    {");
-            sb.AppendLine($"        private readonly string _baseUrl = \"{spec.BaseUrl}\";");
-            sb.AppendLine($"        private readonly string _tenant = \"{tenant}\";");
-            sb.AppendLine($"        private readonly string _userId = \"{userId}\";");
             sb.AppendLine();
 
             // Generate test methods for each endpoint
             foreach (var endpoint in endpoints)
             {
-                GenerateEndpointTestsWithAllurePattern(sb, endpoint, spec, sanitizedTag);
+                GenerateEndpointTestsWithAllurePattern(sb, endpoint, spec, sanitizedTag, true); // Always generate unauthorized tests
             }
 
             // Add helper methods
@@ -51,15 +50,15 @@ namespace APITestAutomation.Services.OpenAPI
             return sb.ToString();
         }
 
-        private static void GenerateEndpointTestsWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec, string sanitizedTag)
+        private static void GenerateEndpointTestsWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec, string sanitizedTag, bool forceUnauthorizedTest = false)
         {
             var methodName = SanitizeIdentifier(endpoint.OperationId);
             
             // Generate positive test following the existing pattern
             GeneratePositiveTestWithAllurePattern(sb, endpoint, methodName, sanitizedTag);
             
-            // Generate negative tests
-            if (endpoint.RequiresAuth)
+            // Generate unauthorized test for all endpoints (as requested)
+            if (endpoint.RequiresAuth || forceUnauthorizedTest)
             {
                 GenerateUnauthorizedTestWithAllurePattern(sb, endpoint, methodName, sanitizedTag);
             }
@@ -80,18 +79,17 @@ namespace APITestAutomation.Services.OpenAPI
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine("        [Category(\"Generated\")]");
-            sb.AppendLine($"        [TestCase(\"{GetDefaultTenant()}\", \"{GetDefaultUserId()}\")]");
-            sb.AppendLine($"        public void {tag}_API_{methodName}_PositiveTest(string tenant, string userId)");
+            sb.AppendLine($"        public void {tag}_API_{methodName}_PositiveTest()");
             sb.AppendLine("        {");
-            sb.AppendLine($"            InitContext(tenant, userId, \"{tag} API Feature\");");
-            sb.AppendLine("            var user = ConfigSetup.GetUser(tenant, userId);");
+            sb.AppendLine($"            var context = GetTestContext();");
+            sb.AppendLine($"            InitContext(context.TenantId, context.UserId, \"{tag} API Feature\");");
             
             if (endpoint.RequiresAuth)
             {
-                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(tenant, user);");
+                sb.AppendLine("            var token = GetAuthToken(context);");
             }
             
-            sb.AppendLine("            var baseUrl = _baseUrl;");
+            sb.AppendLine("            var baseUrl = GetBaseUrl();");
             sb.AppendLine();
 
             // Generate request body if needed
@@ -115,8 +113,8 @@ namespace APITestAutomation.Services.OpenAPI
             if (endpoint.RequiresAuth)
             {
                 sb.AppendLine("                    .OAuth2(token)");
-                sb.AppendLine("                    .Header(\"x-3e-tenantid\", tenant)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", tenant)");
+                sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.TenantId)");
             }
             
             // Add parameters
@@ -191,11 +189,11 @@ namespace APITestAutomation.Services.OpenAPI
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine("        [Category(\"Generated\")]");
-            sb.AppendLine($"        [TestCase(\"{GetDefaultTenant()}\", \"{GetDefaultUserId()}\")]");
-            sb.AppendLine($"        public void {tag}_API_{methodName}_UnauthorizedTest(string tenant, string userId)");
+            sb.AppendLine($"        public void {tag}_API_{methodName}_UnauthorizedTest()");
             sb.AppendLine("        {");
-            sb.AppendLine($"            InitContext(tenant, userId, \"{tag} API Feature\");");
-            sb.AppendLine("            var baseUrl = _baseUrl;");
+            sb.AppendLine($"            var context = GetTestContext();");
+            sb.AppendLine($"            InitContext(context.TenantId, context.UserId, \"{tag} API Feature\");");
+            sb.AppendLine("            var baseUrl = GetBaseUrl();");
             sb.AppendLine();
 
             sb.AppendLine($"            var response = AllureApi.Step(\"Execute {endpoint.Method} {endpoint.Path} without authorization\", () =>");
@@ -227,7 +225,7 @@ namespace APITestAutomation.Services.OpenAPI
             
             sb.AppendLine("            AllureApi.Step(\"Assert unauthorized response\", () =>");
             sb.AppendLine("            {");
-            sb.AppendLine("                Assert.That(response.Extract().Response().StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Unauthorized));");
+            sb.AppendLine("                Assert.That(response.Extract().Response().StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -237,18 +235,17 @@ namespace APITestAutomation.Services.OpenAPI
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine("        [Category(\"Generated\")]");
-            sb.AppendLine($"        [TestCase(\"{GetDefaultTenant()}\", \"{GetDefaultUserId()}\")]");
-            sb.AppendLine($"        public void {tag}_API_{methodName}_MissingRequiredParametersTest(string tenant, string userId)");
+            sb.AppendLine($"        public void {tag}_API_{methodName}_MissingRequiredParametersTest()");
             sb.AppendLine("        {");
-            sb.AppendLine($"            InitContext(tenant, userId, \"{tag} API Feature\");");
-            sb.AppendLine("            var user = ConfigSetup.GetUser(tenant, userId);");
+            sb.AppendLine($"            var context = GetTestContext();");
+            sb.AppendLine($"            InitContext(context.TenantId, context.UserId, \"{tag} API Feature\");");
             
             if (endpoint.RequiresAuth)
             {
-                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(tenant, user);");
+                sb.AppendLine("            var token = GetAuthToken(context);");
             }
             
-            sb.AppendLine("            var baseUrl = _baseUrl;");
+            sb.AppendLine("            var baseUrl = GetBaseUrl();");
             sb.AppendLine();
 
             sb.AppendLine($"            var response = AllureApi.Step(\"Execute {endpoint.Method} {endpoint.Path} with missing required parameters\", () =>");
@@ -258,8 +255,8 @@ namespace APITestAutomation.Services.OpenAPI
             if (endpoint.RequiresAuth)
             {
                 sb.AppendLine("                    .OAuth2(token)");
-                sb.AppendLine("                    .Header(\"x-3e-tenantid\", tenant)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", tenant)");
+                sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.TenantId)");
             }
             
             // Handle path parameters in URL (still need these for the URL to be valid)
@@ -278,7 +275,7 @@ namespace APITestAutomation.Services.OpenAPI
             
             sb.AppendLine("            AllureApi.Step(\"Assert bad request response\", () =>");
             sb.AppendLine("            {");
-            sb.AppendLine("                Assert.That(response.Extract().Response().StatusCode, Is.EqualTo(System.Net.HttpStatusCode.BadRequest));");
+            sb.AppendLine("                Assert.That(response.Extract().Response().StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -288,18 +285,17 @@ namespace APITestAutomation.Services.OpenAPI
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine("        [Category(\"Generated\")]");
-            sb.AppendLine($"        [TestCase(\"{GetDefaultTenant()}\", \"{GetDefaultUserId()}\")]");
-            sb.AppendLine($"        public void {tag}_API_{methodName}_SchemaValidationTest(string tenant, string userId)");
+            sb.AppendLine($"        public void {tag}_API_{methodName}_SchemaValidationTest()");
             sb.AppendLine("        {");
-            sb.AppendLine($"            InitContext(tenant, userId, \"{tag} API Feature\");");
-            sb.AppendLine("            var user = ConfigSetup.GetUser(tenant, userId);");
+            sb.AppendLine($"            var context = GetTestContext();");
+            sb.AppendLine($"            InitContext(context.TenantId, context.UserId, \"{tag} API Feature\");");
             
             if (endpoint.RequiresAuth)
             {
-                sb.AppendLine("            var token = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(tenant, user);");
+                sb.AppendLine("            var token = GetAuthToken(context);");
             }
             
-            sb.AppendLine("            var baseUrl = _baseUrl;");
+            sb.AppendLine("            var baseUrl = GetBaseUrl();");
             sb.AppendLine();
 
             // Generate request body if needed
@@ -316,8 +312,8 @@ namespace APITestAutomation.Services.OpenAPI
             if (endpoint.RequiresAuth)
             {
                 sb.AppendLine("                    .OAuth2(token)");
-                sb.AppendLine("                    .Header(\"x-3e-tenantid\", tenant)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", tenant)");
+                sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.TenantId)");
             }
             
             // Add required parameters with test values
@@ -434,16 +430,6 @@ namespace APITestAutomation.Services.OpenAPI
             }
 
             return sanitized;
-        }
-
-        private static string GetDefaultTenant()
-        {
-            return "ptpd68r3nke7q5pnutzaaw";
-        }
-
-        private static string GetDefaultUserId()
-        {
-            return "PPSAutoTestUser0";
         }
 
         private static string GenerateHelperMethods()
