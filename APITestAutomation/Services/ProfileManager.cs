@@ -26,16 +26,31 @@ namespace APITestAutomation.Services
 
         public async Task<List<string>> GetAvailableProfilesAsync()
         {
+            var profiles = new List<string>();
+            
             if (!Directory.Exists(_profilesPath))
-                return new List<string>();
+                return profiles;
 
-            var files = Directory.GetFiles(_profilesPath, "*.json");
-            return files.Select(f => Path.GetFileNameWithoutExtension(f)).ToList();
+            foreach (var teamDir in Directory.GetDirectories(_profilesPath))
+            {
+                var teamName = Path.GetFileName(teamDir);
+                foreach (var envDir in Directory.GetDirectories(teamDir))
+                {
+                    var envName = Path.GetFileName(envDir);
+                    foreach (var file in Directory.GetFiles(envDir, "*.json"))
+                    {
+                        var tenantId = Path.GetFileNameWithoutExtension(file);
+                        profiles.Add($"{teamName}/{envName}/{tenantId}");
+                    }
+                }
+            }
+            
+            return profiles;
         }
 
-        public async Task<TenantProfile?> LoadProfileAsync(string profileName, string? masterPassword = null)
+        public async Task<TenantProfile?> LoadProfileAsync(string team, string environment, string tenantId, string? masterPassword = null)
         {
-            var filePath = Path.Combine(_profilesPath, $"{profileName}.json");
+            var filePath = Path.Combine(_profilesPath, team, environment, $"{tenantId}.json");
             if (!File.Exists(filePath))
                 return null;
 
@@ -53,7 +68,7 @@ namespace APITestAutomation.Services
             return JsonSerializer.Deserialize<TenantProfile>(content);
         }
 
-        public async Task SaveProfileAsync(TenantProfile profile, string profileName, string? masterPassword = null)
+        public async Task SaveProfileAsync(TenantProfile profile, string team, string environment, string tenantId, string? masterPassword = null)
         {
             var content = JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true });
             
@@ -62,43 +77,67 @@ namespace APITestAutomation.Services
                 content = EncryptContent(content, masterPassword);
             }
 
-            var filePath = Path.Combine(_profilesPath, $"{profileName}.json");
+            var dirPath = Path.Combine(_profilesPath, team, environment);
+            Directory.CreateDirectory(dirPath);
+            
+            var filePath = Path.Combine(dirPath, $"{tenantId}.json");
             await File.WriteAllTextAsync(filePath, content);
         }
 
         public async Task EncryptAllProfilesAsync(string masterPassword)
         {
-            var profiles = await GetAvailableProfilesAsync();
+            if (!Directory.Exists(_profilesPath))
+                return;
             
-            foreach (var profileName in profiles)
+            foreach (var teamDir in Directory.GetDirectories(_profilesPath))
             {
-                var profile = await LoadProfileAsync(profileName);
-                if (profile != null)
+                var teamName = Path.GetFileName(teamDir);
+                foreach (var envDir in Directory.GetDirectories(teamDir))
                 {
-                    await SaveProfileAsync(profile, profileName, masterPassword);
-                    Console.WriteLine($"✅ Encrypted profile: {profileName}");
+                    var envName = Path.GetFileName(envDir);
+                    foreach (var file in Directory.GetFiles(envDir, "*.json"))
+                    {
+                        var tenantId = Path.GetFileNameWithoutExtension(file);
+                        var profile = await LoadProfileAsync(teamName, envName, tenantId);
+                        if (profile != null)
+                        {
+                            await SaveProfileAsync(profile, teamName, envName, tenantId, masterPassword);
+                            Console.WriteLine($"✅ Encrypted profile: {teamName}/{envName}/{tenantId}");
+                        }
+                    }
                 }
             }
         }
 
         public async Task DecryptAllProfilesAsync(string masterPassword)
         {
-            var profiles = await GetAvailableProfilesAsync();
+            if (!Directory.Exists(_profilesPath))
+                return;
             
-            foreach (var profileName in profiles)
+            foreach (var teamDir in Directory.GetDirectories(_profilesPath))
             {
-                try
+                var teamName = Path.GetFileName(teamDir);
+                foreach (var envDir in Directory.GetDirectories(teamDir))
                 {
-                    var profile = await LoadProfileAsync(profileName, masterPassword);
-                    if (profile != null)
+                    var envName = Path.GetFileName(envDir);
+                    foreach (var file in Directory.GetFiles(envDir, "*.json"))
                     {
-                        await SaveProfileAsync(profile, profileName); // Save without encryption
-                        Console.WriteLine($"✅ Decrypted profile: {profileName}");
+                        var tenantId = Path.GetFileNameWithoutExtension(file);
+                        try
+                        {
+                            var profile = await LoadProfileAsync(teamName, envName, tenantId, masterPassword);
+                            if (profile != null)
+                            {
+                                await SaveProfileAsync(profile, teamName, envName, tenantId); // Save without encryption
+                                Console.WriteLine($"✅ Decrypted profile: {teamName}/{envName}/{tenantId}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ Failed to decrypt {teamName}/{envName}/{tenantId}: {ex.Message}");
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"❌ Failed to decrypt {profileName}: {ex.Message}");
+                    }
                 }
             }
         }

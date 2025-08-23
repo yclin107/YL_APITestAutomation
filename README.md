@@ -99,29 +99,43 @@ The framework uses encrypted JSON profiles to manage tenant configurations and u
 #### Profile Structure
 ```json
 {
-  "tenantId": "your-tenant-id",
-  "tenantName": "Development Environment", 
-  "baseUrl": "https://api.example.com/v1",
-  "users": [
-    {
-      "userId": "user1",
-      "username": "user1@domain.com",
-      "password": "password123",
-      "firstName": "Test",
-      "lastName": "User"
+  "Elite3EClientId": "your-client-id",
+  "PPSClientId": "your-pps-client-id",
+  "ProformaApiUrl": "https://api.example.com/v1",
+  "TenantId": "your-tenant-id",
+  "Users": {
+    "Users": {
+      "TestUser1": {
+        "LoginId": "user1@domain.com",
+        "FirstName": "Test",
+        "LastName": "User",
+        "Password": "password123",
+        "DefaultTimekeeperIndex": "123",
+        "DefaultTimekeeperNumber": "TK001"
+      }
     }
-  ]
+  }
 }
+```
+
+#### Profile Organization
+```
+APITestAutomationTest/Profiles/
+└── 3E-Proforma/           # Team name
+    ├── dev/               # Environment
+    │   └── tenant1.json   # Tenant profile
+    └── test/
+        └── tenant2.json
 ```
 
 #### Running Tests
 ```bash
 # Set profile path (team/environment/tenantId) and run tests
-$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test
+$env:TEST_PROFILE="3E-Proforma/dev/tenant1"; dotnet test
 
 # With master password for encrypted profiles
-$env:MASTER_PASSWORD="admin"; $env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test
+$env:MASTER_PASSWORD="admin"; $env:TEST_PROFILE="3E-Proforma/dev/tenant1"; dotnet test
 
 # Parallel execution with 4 threads
-$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test --parallel 4
+$env:TEST_PROFILE="3E-Proforma/dev/tenant1"; dotnet test --parallel 4
 ```

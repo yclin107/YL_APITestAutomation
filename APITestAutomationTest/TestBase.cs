@@ -42,6 +42,10 @@ namespace APITestAutomationTest
                         throw new InvalidOperationException($"Invalid profile path format. Expected: team/environment/tenantId, got: {profilePath}");
                     
                     _currentProfile = _profileManager.LoadProfileAsync(parts[0], parts[1], parts[2], masterPassword).Result;
+                    if (parts.Length != 3)
+                        throw new InvalidOperationException($"Invalid profile path format. Expected: team/environment/tenantId, got: {profilePath}");
+                    
+                    _currentProfile = _profileManager.LoadProfileAsync(parts[0], parts[1], parts[2], masterPassword).Result;
                     if (_currentProfile == null)
                     {
                         throw new InvalidOperationException($"Profile '{profilePath}' not found. Available profiles: {string.Join(", ", _profileManager.GetAvailableProfilesAsync().Result)}");

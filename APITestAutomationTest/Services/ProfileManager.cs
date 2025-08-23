@@ -101,6 +101,63 @@ namespace APITestAutomationTest.Services
             return users.Take(threadCount).ToList();
         }
 
+        public async Task EncryptAllProfilesAsync(string masterPassword)
+        {
+            if (!Directory.Exists(_profilesPath))
+                return;
+            
+            foreach (var teamDir in Directory.GetDirectories(_profilesPath))
+            {
+                var teamName = Path.GetFileName(teamDir);
+                foreach (var envDir in Directory.GetDirectories(teamDir))
+                {
+                    var envName = Path.GetFileName(envDir);
+                    foreach (var file in Directory.GetFiles(envDir, "*.json"))
+                    {
+                        var tenantId = Path.GetFileNameWithoutExtension(file);
+                        var profile = await LoadProfileAsync(teamName, envName, tenantId);
+                        if (profile != null)
+                        {
+                            await SaveProfileAsync(profile, teamName, envName, tenantId, masterPassword);
+                            Console.WriteLine($"✅ Encrypted profile: {teamName}/{envName}/{tenantId}");
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task DecryptAllProfilesAsync(string masterPassword)
+        {
+            if (!Directory.Exists(_profilesPath))
+                return;
+            
+            foreach (var teamDir in Directory.GetDirectories(_profilesPath))
+            {
+                var teamName = Path.GetFileName(teamDir);
+                foreach (var envDir in Directory.GetDirectories(teamDir))
+                {
+                    var envName = Path.GetFileName(envDir);
+                    foreach (var file in Directory.GetFiles(envDir, "*.json"))
+                    {
+                        var tenantId = Path.GetFileNameWithoutExtension(file);
+                        try
+                        {
+                            var profile = await LoadProfileAsync(teamName, envName, tenantId, masterPassword);
+                            if (profile != null)
+                            {
+                                await SaveProfileAsync(profile, teamName, envName, tenantId); // Save without encryption
+                                Console.WriteLine($"✅ Decrypted profile: {teamName}/{envName}/{tenantId}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ Failed to decrypt {teamName}/{envName}/{tenantId}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+
         private bool IsEncrypted(string content)
         {
             try
