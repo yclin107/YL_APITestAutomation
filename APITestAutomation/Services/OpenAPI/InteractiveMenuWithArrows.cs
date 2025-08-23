@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using APITestAutomationTest.Services;
 
 namespace APITestAutomation.Services.OpenAPI
 {

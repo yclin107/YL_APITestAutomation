@@ -86,17 +86,17 @@ namespace APITestAutomationTest.Services
 
         public UserProfile GetRandomUser(TenantProfile profile)
         {
-            if (!profile.Users.Users.Any())
+            if (!profile.Users.Any())
                 throw new InvalidOperationException("No users available in profile");
 
             var random = new Random();
-            var users = profile.Users.Users.Values.ToList();
+            var users = profile.Users.Values.ToList();
             return users[random.Next(users.Count)];
         }
 
         public List<UserProfile> GetUsersForParallelExecution(TenantProfile profile, int threadCount)
         {
-            var users = profile.Users.Users.Values.ToList();
+            var users = profile.Users.Values.ToList();
             if (users.Count < threadCount)
             {
                 // If we don't have enough users, repeat users
@@ -246,6 +246,8 @@ namespace APITestAutomationTest.Services
 
     public class UserProfile
     {
+        public string UserId => LoginId; // Use LoginId as UserId
+        public string Username => $"{FirstName}{LastName}"; // Generate Username from names
         public string LoginId { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;

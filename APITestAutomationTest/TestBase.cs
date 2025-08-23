@@ -74,7 +74,7 @@ namespace APITestAutomationTest
                 return new TestContext
                 {
                     TenantId = _currentProfile.TenantId,
-                    UserId = user.UserId,
+                    UserId = user.LoginId,
                     User = user,
                     Profile = _currentProfile
                 };
@@ -92,7 +92,7 @@ namespace APITestAutomationTest
                 context.TenantId, 
                 new APITestAutomation.Helpers.ConfigSetup.UserConfig
                 {
-                    LoginId = context.User.LoginId,
+                    LoginId = context.User.LoginId, 
                     Username = context.User.Username,
                     FirstName = context.User.FirstName,
                     LastName = context.User.LastName,
@@ -119,12 +119,12 @@ namespace APITestAutomationTest
         {
             var context = GetTestContext();
             _tenat = context.TenantId;
-            _userId = context.UserId;
+            _userId = context.User.LoginId;
 
             AllureLifecycle.Instance.UpdateTestCase(tc =>
             {
                 tc.labels.Add(Label.Suite(feature));
-                tc.labels.Add(Label.Tag($"user: {_userId}"));
+                tc.labels.Add(Label.Tag($"user: {context.User.Username}"));
                 tc.labels.Add(Label.Tag($"tenant: {_tenat}"));
             });
         }
