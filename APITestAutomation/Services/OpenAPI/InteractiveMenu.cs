@@ -164,36 +164,31 @@ namespace APITestAutomation.Services.OpenAPI
 
             try
             {
+                Console.WriteLine("🚀 Opening Allure report in new terminal...");
+                
                 var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "allure",
-                        Arguments = "serve allure-results",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
+                        FileName = "cmd",
+                        Arguments = "/c start cmd /k \"allure serve allure-results\"",
+                        UseShellExecute = true,
+                        WorkingDirectory = GetSolutionRoot(),
+                        CreateNoWindow = false
                     }
                 };
 
-                Console.WriteLine("🚀 Starting Allure report server...");
                 process.Start();
-                
-                Console.WriteLine("📊 Allure report should open in your browser automatically.");
-                Console.WriteLine("Press any key to stop the server...");
-                Console.ReadKey();
-                
-                if (!process.HasExited)
-                {
-                    process.Kill();
-                }
+                Console.WriteLine("📊 New terminal opened with Allure report server.");
+                Console.WriteLine("The report should open in your browser automatically.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error generating report: {ex.Message}");
                 Console.WriteLine("Make sure Allure is installed: npm install -g allure-commandline");
-                PauseForUser();
             }
+            
+            PauseForUser();
         }
 
         private async Task HandleAutoGenerateTests()
@@ -557,6 +552,13 @@ namespace APITestAutomation.Services.OpenAPI
             return Path.GetFullPath(testProjectPath);
         }
 
+        private string GetSolutionRoot()
+        {
+            var currentDir = AppContext.BaseDirectory;
+            var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
+            return Path.GetFullPath(projectRoot);
+        }
+
         private string GetLastUsedSpecPath()
         {
             var configPath = Path.Combine(AppContext.BaseDirectory, "Config", "OpenAPI", "last-used-spec.txt");
@@ -577,6 +579,9 @@ namespace APITestAutomation.Services.OpenAPI
 
         private string GetSpecificationPath()
         {
+            var lastUsed = GetLastUsedSpecPath();
+            
+            if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
             {
                 Console.WriteLine($"📄 Last used specification: {Path.GetFileName(lastUsed)}");
                 Console.WriteLine($"📂 Path: {lastUsed}");
@@ -653,6 +658,12 @@ namespace APITestAutomation.Services.OpenAPI
 
             Console.WriteLine("❌ Invalid selection.");
             return string.Empty;
+        }
+
+        private string GetBaseUrl()
+        {
+            Console.Write("Enter base URL (optional, will use spec default): ");
+            return Console.ReadLine()?.Trim() ?? string.Empty;
         }
 
         private void PauseForUser()
