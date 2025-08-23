@@ -83,6 +83,7 @@ namespace APITestAutomation.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("❌ No profiles found. Please create a profile first.");
+                Console.WriteLine($"📁 Expected location: {GetProfilesPath()}");
                 PauseForUser();
                 return;
             }
@@ -161,6 +162,15 @@ namespace APITestAutomation.Services.OpenAPI
             Console.Clear();
             Console.WriteLine("=== Generate Allure Report ===");
             Console.WriteLine();
+
+            var allureResultsPath = Path.Combine(GetSolutionRoot(), "allure-results");
+            
+            if (!Directory.Exists(allureResultsPath))
+            {
+                Console.WriteLine("❌ No allure-results directory found. Please run tests first.");
+                PauseForUser();
+                return;
+            }
 
             try
             {
@@ -279,6 +289,7 @@ namespace APITestAutomation.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("No profiles found.");
+                Console.WriteLine($"📁 Expected location: {GetProfilesPath()}");
             }
             else
             {
@@ -371,8 +382,6 @@ namespace APITestAutomation.Services.OpenAPI
             var specPath = GetSpecificationPath();
             if (string.IsNullOrEmpty(specPath)) return;
 
-            var baseUrl = GetBaseUrl();
-
             try
             {
                 Console.WriteLine("Loading OpenAPI specification...");
@@ -425,7 +434,6 @@ namespace APITestAutomation.Services.OpenAPI
             var specPath = GetSpecificationPath();
             if (string.IsNullOrEmpty(specPath)) return;
 
-
             try
             {
                 Console.WriteLine("Detecting changes...");
@@ -450,7 +458,6 @@ namespace APITestAutomation.Services.OpenAPI
 
             var specPath = GetSpecificationPath();
             if (string.IsNullOrEmpty(specPath)) return;
-
 
             try
             {
@@ -536,9 +543,7 @@ namespace APITestAutomation.Services.OpenAPI
 
         private string GetSpecificationsDirectory()
         {
-            // Always point to APITestAutomation/Specifications from the current project
             var currentDir = AppContext.BaseDirectory;
-            // Navigate to the APITestAutomation project root, then to Specifications
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
             var specificationsPath = Path.Combine(projectRoot, "APITestAutomation", "Specifications");
             return Path.GetFullPath(specificationsPath);
@@ -559,68 +564,15 @@ namespace APITestAutomation.Services.OpenAPI
             return Path.GetFullPath(projectRoot);
         }
 
-        private string GetLastUsedSpecPath()
+        private string GetProfilesPath()
         {
-            var configPath = Path.Combine(AppContext.BaseDirectory, "Config", "OpenAPI", "last-used-spec.txt");
-            if (File.Exists(configPath))
-            {
-                return File.ReadAllText(configPath).Trim();
-            }
-            return string.Empty;
-        }
-
-        private void SaveLastUsedSpecPath(string specPath)
-        {
-            var configDir = Path.Combine(AppContext.BaseDirectory, "Config", "OpenAPI");
-            Directory.CreateDirectory(configDir);
-            var configPath = Path.Combine(configDir, "last-used-spec.txt");
-            File.WriteAllText(configPath, specPath);
+            var currentDir = AppContext.BaseDirectory;
+            var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
+            var profilesPath = Path.Combine(projectRoot, "APITestAutomation", "Profiles");
+            return Path.GetFullPath(profilesPath);
         }
 
         private string GetSpecificationPath()
-        {
-            var lastUsed = GetLastUsedSpecPath();
-            
-            if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
-            {
-                Console.WriteLine($"📄 Last used specification: {Path.GetFileName(lastUsed)}");
-                Console.WriteLine($"📂 Path: {lastUsed}");
-                Console.Write($"Press Enter to continue with '{Path.GetFileName(lastUsed)}' or select a different file (b): ");
-            }
-            else
-            {
-                Console.Write("No previous specification found. Press Enter to browse available files: ");
-            }
-            
-            var input = Console.ReadLine()?.Trim();
-
-            if (string.IsNullOrEmpty(input))
-            {
-                if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
-                {
-                    Console.WriteLine($"✅ Using: {Path.GetFileName(lastUsed)}");
-                    return lastUsed;
-                }
-                return BrowseSpecificationFiles();
-            }
-
-            if (input.ToLower() == "b")
-            {
-                return BrowseSpecificationFiles();
-            }
-
-            if (!File.Exists(input))
-            {
-                Console.WriteLine($"❌ File not found: {input}");
-                PauseForUser();
-                return string.Empty;
-            }
-
-            SaveLastUsedSpecPath(input);
-            return input;
-        }
-
-        private string BrowseSpecificationFiles()
         {
             var specDir = GetSpecificationsDirectory();
             if (!Directory.Exists(specDir))
@@ -641,7 +593,6 @@ namespace APITestAutomation.Services.OpenAPI
                 return string.Empty;
             }
 
-            Console.WriteLine();
             Console.WriteLine("Available files:");
             for (int i = 0; i < files.Count; i++)
             {
@@ -651,19 +602,11 @@ namespace APITestAutomation.Services.OpenAPI
             Console.Write($"Select file (1-{files.Count}): ");
             if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= files.Count)
             {
-                var selectedPath = files[choice - 1];
-                SaveLastUsedSpecPath(selectedPath);
-                return selectedPath;
+                return files[choice - 1];
             }
 
             Console.WriteLine("❌ Invalid selection.");
             return string.Empty;
-        }
-
-        private string GetBaseUrl()
-        {
-            Console.Write("Enter base URL (optional, will use spec default): ");
-            return Console.ReadLine()?.Trim() ?? string.Empty;
         }
 
         private void PauseForUser()
