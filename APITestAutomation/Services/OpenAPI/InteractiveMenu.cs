@@ -381,10 +381,10 @@ namespace APITestAutomation.Services.OpenAPI
             try
             {
                 Console.WriteLine("Loading OpenAPI specification...");
-                var spec = await _manager.LoadSpecificationAsync(specPath, baseUrl);
+                var spec = await _manager.LoadSpecificationAsync(specPath);
 
                 Console.WriteLine("Detecting changes...");
-                var changes = await _manager.DetectChangesAsync(specPath, baseUrl);
+                var changes = await _manager.DetectChangesAsync(specPath);
 
                 if (changes.Any())
                 {
@@ -430,12 +430,11 @@ namespace APITestAutomation.Services.OpenAPI
             var specPath = GetSpecificationPath();
             if (string.IsNullOrEmpty(specPath)) return;
 
-            var baseUrl = GetBaseUrl();
 
             try
             {
                 Console.WriteLine("Detecting changes...");
-                var changes = await _manager.DetectChangesAsync(specPath, baseUrl);
+                var changes = await _manager.DetectChangesAsync(specPath);
 
                 Console.WriteLine();
                 Console.WriteLine(_manager.FormatChangeSummary(changes));
@@ -578,8 +577,6 @@ namespace APITestAutomation.Services.OpenAPI
 
         private string GetSpecificationPath()
         {
-            var lastUsed = GetLastUsedSpecPath();
-            if (!string.IsNullOrEmpty(lastUsed) && File.Exists(lastUsed))
             {
                 Console.WriteLine($"📄 Last used specification: {Path.GetFileName(lastUsed)}");
                 Console.WriteLine($"📂 Path: {lastUsed}");

@@ -1,8 +1,0 @@
-{
-  "name": "api-test-automation",
-  "version": "1.0.0",
-  "scripts": {
-    "menu": "dotnet run --project APITestAutomation"
-  },
-  "devDependencies": {}
-}
