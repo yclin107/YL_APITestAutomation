@@ -189,64 +189,31 @@ namespace APITestAutomation.Services.OpenAPI
 
             try
             {
-                // Check if allure is installed
-                var checkProcess = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "allure",
-                        Arguments = "--version",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    }
-                };
-
-                try
-                {
-                    checkProcess.Start();
-                    await checkProcess.WaitForExitAsync();
-                }
-                catch
-                {
-                    Console.WriteLine("❌ Allure is not installed or not in PATH.");
-                    Console.WriteLine("Please install Allure:");
-                    Console.WriteLine("  npm install -g allure-commandline");
-                    Console.WriteLine("  or download from: https://docs.qameta.io/allure/#_installing_a_commandline");
-                    PauseForUser();
-                    return;
-                }
-
+                Console.WriteLine("🚀 Opening Allure report in new terminal...");
+                
                 var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "allure",
-                        Arguments = $"serve \"{allureResultsPath}\"",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        WorkingDirectory = GetSolutionRoot()
+                        FileName = "cmd",
+                        Arguments = "/c start cmd /k \"allure serve allure-results\"",
+                        UseShellExecute = true,
+                        WorkingDirectory = GetSolutionRoot(),
+                        CreateNoWindow = false
                     }
                 };
 
-                Console.WriteLine("🚀 Starting Allure report server...");
                 process.Start();
-                
-                Console.WriteLine("📊 Allure report should open in your browser automatically.");
-                Console.WriteLine("Press any key to stop the server...");
-                Console.ReadKey();
-                
-                if (!process.HasExited)
-                {
-                    process.Kill();
-                }
+                Console.WriteLine("📊 New terminal opened with Allure report server.");
+                Console.WriteLine("The report should open in your browser automatically.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error generating report: {ex.Message}");
+                Console.WriteLine("Make sure Allure is installed: npm install -g allure-commandline");
             }
+            
+            PauseForUser();
         }
 
         private async Task HandleAutoGenerateTests()
