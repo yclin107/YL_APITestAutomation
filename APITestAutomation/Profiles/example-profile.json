@@ -1,0 +1,33 @@
+{
+  "tenantId": "ptpd68r3nke7q5pnutzaaw",
+  "tenantName": "Development Environment",
+  "baseUrl": "https://api.example.com/v1",
+  "users": [
+    {
+      "userId": "PPSAutoTestUser0",
+      "username": "PPSAutoTestUser0@h3esharksdev01.onmicrosoft.com",
+      "password": "your-password-here",
+      "firstName": "AutoTestUser0",
+      "lastName": "PPS",
+      "email": "PPSAutoTestUser0@h3esharksdev01.onmicrosoft.com",
+      "defaultTimekeeperIndex": "3323",
+      "defaultTimekeeperNumber": "19999"
+    },
+    {
+      "userId": "PPSAutoTestUser1",
+      "username": "PPSAutoTestUser1@h3esharksdev01.onmicrosoft.com",
+      "password": "your-password-here",
+      "firstName": "AutoTestUser1",
+      "lastName": "PPS",
+      "email": "PPSAutoTestUser1@h3esharksdev01.onmicrosoft.com",
+      "defaultTimekeeperIndex": "13590",
+      "defaultTimekeeperNumber": "PPSAUTO1"
+    }
+  ],
+  "config": {
+    "clientId": "b1f2a07e-810a-4805-8108-67348c9dce76",
+    "authority": "https://login.microsoftonline.com/b2c44778-9710-436c-a075-9bcc06e79a1b",
+    "scope": ["api://c6f47024-bb8b-4cd5-8f6c-8cead2f2476f/.default"],
+    "redirectUri": "http://localhost:8686/sampleapp/auth"
+  }
+}

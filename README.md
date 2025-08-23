@@ -22,7 +22,7 @@ This framework now includes an automatic test generator based on OpenAPI (Swagge
 
 #### Interactive Menu
 ```bash
-dotnet run --project APITestAutomation
+dotnet menu
 ```
 
 #### Direct Commands
@@ -30,7 +30,7 @@ dotnet run --project APITestAutomation
 #### 1. Generate tests from OpenAPI specification
 
 ```bash
-dotnet run --project APITestAutomation generate swagger.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser0
+dotnet run --project APITestAutomation generate swagger.json
 ```
 
 #### 2. Detect changes in specification
@@ -42,7 +42,7 @@ dotnet run --project APITestAutomation detect swagger.json
 #### 3. Preview tests that would be generated
 
 ```bash
-dotnet run --project APITestAutomation preview swagger.json ptpd68r3nke7q5pnutzaaw PPSAutoTestUser0
+dotnet run --project APITestAutomation preview swagger.json
 ```
 
 ### Workflow
@@ -58,6 +58,7 @@ dotnet run --project APITestAutomation preview swagger.json ptpd68r3nke7q5pnutza
 - `APITestAutomation/Config/OpenAPI/` - Saved configurations and specifications
 - `APITestAutomation/Reports/` - Change reports
 - `APITestAutomation/Specifications/` - OpenAPI specification files
+- `APITestAutomation/Profiles/` - Encrypted tenant profiles (gitignored)
 
 ### BDD Support
 
@@ -85,3 +86,39 @@ When you modify auto-generated tests manually:
 - System detects your changes
 - Asks if you want to preserve or overwrite your modifications
 - Maintains a backup of your custom changes
+
+### Profile Management
+
+The framework uses encrypted JSON profiles to manage tenant configurations and user credentials:
+
+- **Profiles**: Store tenant info, users, and passwords in JSON files
+- **Encryption**: Profiles can be encrypted with a master password for security
+- **Parallel Execution**: Multiple users per tenant for parallel test execution
+- **No Environment Variables**: Passwords stored in profiles, not environment variables
+
+#### Profile Structure
+```json
+{
+  "tenantId": "your-tenant-id",
+  "tenantName": "Development Environment", 
+  "baseUrl": "https://api.example.com/v1",
+  "users": [
+    {
+      "userId": "user1",
+      "username": "user1@domain.com",
+      "password": "password123",
+      "firstName": "Test",
+      "lastName": "User"
+    }
+  ]
+}
+```
+
+#### Running Tests
+```bash
+# Set profile and run tests
+TEST_PROFILE=dev-profile dotnet test
+
+# With master password for encrypted profiles
+MASTER_PASSWORD=your-master-password TEST_PROFILE=dev-profile dotnet test
+```
