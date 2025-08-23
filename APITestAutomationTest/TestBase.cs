@@ -1,8 +1,7 @@
 using Allure.Net.Commons;
 using Allure.NUnit;
 using Allure.NUnit.Attributes;
-using APITestAutomation.Models.ProfileModels;
-using APITestAutomation.Services;
+using APITestAutomationTest.Services;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
@@ -33,20 +32,24 @@ namespace APITestAutomationTest
             {
                 if (_currentProfile != null) return;
 
-                var profileName = Environment.GetEnvironmentVariable("TEST_PROFILE") ?? "default";
+                var profilePath = Environment.GetEnvironmentVariable("TEST_PROFILE") ?? "3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw";
                 var masterPassword = Environment.GetEnvironmentVariable("MASTER_PASSWORD");
 
                 try
                 {
-                    _currentProfile = _profileManager.LoadProfileAsync(profileName, masterPassword).Result;
+                    var parts = profilePath.Split('/');
+                    if (parts.Length != 3)
+                        throw new InvalidOperationException($"Invalid profile path format. Expected: team/environment/tenantId, got: {profilePath}");
+                    
+                    _currentProfile = _profileManager.LoadProfileAsync(parts[0], parts[1], parts[2], masterPassword).Result;
                     if (_currentProfile == null)
                     {
-                        throw new InvalidOperationException($"Profile '{profileName}' not found. Available profiles: {string.Join(", ", _profileManager.GetAvailableProfilesAsync().Result)}");
+                        throw new InvalidOperationException($"Profile '{profilePath}' not found. Available profiles: {string.Join(", ", _profileManager.GetAvailableProfilesAsync().Result)}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to load profile '{profileName}': {ex.Message}");
+                    throw new InvalidOperationException($"Failed to load profile '{profilePath}': {ex.Message}");
                 }
             }
         }
@@ -76,18 +79,17 @@ namespace APITestAutomationTest
 
         protected string GetBaseUrl()
         {
-            return _currentProfile?.BaseUrl ?? throw new InvalidOperationException("No profile loaded");
+            return _currentProfile?.ProformaApiUrl ?? throw new InvalidOperationException("No profile loaded");
         }
 
         protected string GetAuthToken(TestContext context)
         {
-            // This would integrate with your existing token service
-            // For now, returning a placeholder - you can integrate with your existing TokenService
             return APITestAutomationServices.Authentications.TokenService.PPSProformaToken(
-                context.TenantId, 
+                context.Profile.TenantId, 
                 new APITestAutomation.Helpers.ConfigSetup.UserConfig
                 {
                     LoginId = context.User.Username,
+                    Username = context.User.LoginId,
                     FirstName = context.User.FirstName,
                     LastName = context.User.LastName,
                     PasswordEnvVar = context.User.Password,
@@ -100,6 +102,20 @@ namespace APITestAutomationTest
         {
             _tenat = tenat;
             _userId = userId;
+
+            AllureLifecycle.Instance.UpdateTestCase(tc =>
+            {
+                tc.labels.Add(Label.Suite(feature));
+                tc.labels.Add(Label.Tag($"user: {_userId}"));
+                tc.labels.Add(Label.Tag($"tenant: {_tenat}"));
+            });
+        }
+
+        protected void InitContext(string? feature = null)
+        {
+            var context = GetTestContext();
+            _tenat = context.TenantId;
+            _userId = context.UserId;
 
             AllureLifecycle.Instance.UpdateTestCase(tc =>
             {

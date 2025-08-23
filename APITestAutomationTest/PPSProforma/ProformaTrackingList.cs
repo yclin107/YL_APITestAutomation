@@ -1,4 +1,4 @@
-﻿using Allure.Net.Commons;
+using Allure.Net.Commons;
 using Allure.NUnit.Attributes;
 using APITestAutomation.Endpoints;
 using APITestAutomation.Helpers;
@@ -18,20 +18,19 @@ namespace APITestAutomationTest.PPSProforma
     {
         [Test]
         [Category("Smoke")]
-        [TestCase("ptpd68r3nke7q5pnutzaaw", "PPSAutoTestUser2")]
-        public void PPS_API_ProformaTrackingList_MyProformas_FilterBy_BillingTimekeeperNumber(string tenant, string userId)
+        public void PPS_API_ProformaTrackingList_MyProformas_FilterBy_BillingTimekeeperNumber()
         {
-            InitContext(tenant, userId , "Proforma Tracking List Feature");
-            var user = ConfigSetup.GetUser(tenant, userId);
-            var ppsToken = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(tenant, user);         
-            var baseUrl = ConfigSetup.GetTenantConfig(tenant).ProformaApiUrl;
+            var context = GetTestContext();
+            InitContext("Proforma Tracking List Feature");
+            var ppsToken = GetAuthToken(context);
+            var baseUrl = GetBaseUrl();
 
             var requestBody = new TrackingListFilter
             {
                 IsNotStarted = true,
                 IsIncomplete = true,
                 IsArchived = true,
-                BillingTimekeeperNumber = user.DefaultTimekeeperNumber
+                BillingTimekeeperNumber = context.User.DefaultTimekeeperNumber
             };
 
             AllureApi.Step("Generate & Attach Proforma Tracking List By Timekeeper Number Request", () =>
@@ -44,8 +43,8 @@ namespace APITestAutomationTest.PPSProforma
             {
                 return Given()
                 .OAuth2(ppsToken)
-                .Header("x-3e-tenantid", tenant)
-                .Header("X-3E-InstanceId", tenant)
+                .Header("x-3e-tenantid", context.TenantId)
+                .Header("X-3E-InstanceId", context.TenantId)
                 .QueryParam("orderby", "Client")
                 .QueryParam("ascending", true)
                 .QueryParam("page", "1")
@@ -98,8 +97,8 @@ namespace APITestAutomationTest.PPSProforma
                     Assert.That(proformaTrackingListResponse?.Summary.Completed, Is.GreaterThanOrEqualTo(0), "Completed proformas are 0");
                     Assert.That(proformaTrackingListResponse?.Summary.Incomplete, Is.GreaterThanOrEqualTo(0), "Incomplete proformas are empty");
                     Assert.That(proformaTrackingListResponse?.Summary.NotStarted, Is.GreaterThanOrEqualTo(0), "NotStarted proformas are empty");
-                    Assert.That(proformaTrackingListResponse?.Summary.TimekeeperName, Does.Contain(user.FirstName), $"User name doesn't contains {user.FirstName}");
-                    Assert.That(proformaTrackingListResponse?.Summary.TimekeeperNumber, Is.EqualTo(user.DefaultTimekeeperNumber), "TimekeeperNumber doesn't match");
+                    Assert.That(proformaTrackingListResponse?.Summary.TimekeeperName, Does.Contain(context.User.FirstName), $"User name doesn't contains {context.User.FirstName}");
+                    Assert.That(proformaTrackingListResponse?.Summary.TimekeeperNumber, Is.EqualTo(context.User.DefaultTimekeeperNumber), "TimekeeperNumber doesn't match");
                 });
             });
 
@@ -129,30 +128,29 @@ namespace APITestAutomationTest.PPSProforma
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(proformaTrackingListResponse.ListFilter.TimekeeperNumbers.Contains(user.DefaultTimekeeperNumber), $"Timekeeper number is different than {user.DefaultTimekeeperNumber}");
+                    Assert.That(proformaTrackingListResponse.ListFilter.TimekeeperNumbers.Contains(context.User.DefaultTimekeeperNumber), $"Timekeeper number is different than {context.User.DefaultTimekeeperNumber}");
                     Assert.That(proformaTrackingListResponse.ListResponse.Proformas.All(p => p.BillingTimekeeperNumber == user.DefaultTimekeeperNumber),
-                       $"Not all proformas have the expected TimeKeeperNumber {user.DefaultTimekeeperNumber}");
+                       $"Not all proformas have the expected TimeKeeperNumber {context.User.DefaultTimekeeperNumber}");
                 });
             });
         }
 
         [Test]
         [Category("Smoke")]
-        [TestCase("ptpd68r3nke7q5pnutzaaw", "PPSAutoTestUser2")]
-        public void PPS_API_ProformaTrackingList_MyProformas_FilterBy_ClientName(string tenant, string userId)
+        public void PPS_API_ProformaTrackingList_MyProformas_FilterBy_ClientName()
         {
-            InitContext(tenant, userId, "Proforma Tracking List Feature");
-            var user = ConfigSetup.GetUser(tenant, userId);
-            var ppsToken = APITestAutomationServices.Authentications.TokenService.PPSProformaToken(tenant, user);
-            var baseUrl = ConfigSetup.GetTenantConfig(tenant).ProformaApiUrl;
+            var context = GetTestContext();
+            InitContext("Proforma Tracking List Feature");
+            var ppsToken = GetAuthToken(context);
+            var baseUrl = GetBaseUrl();
             var endpoint = PPSProformaEndpoints.ProformaBucket.Replace("{bucketName}", ProformaBucket.My.ToString());
 
             var  ppsProformaBucketReponse = AllureApi.Step("Get Available Proformas in a Bucket", () =>
             {
                 return Given()
                 .OAuth2(ppsToken)
-                .Header("x-3e-tenantid", tenant)
-                .Header("X-3E-InstanceId", tenant)
+                .Header("x-3e-tenantid", context.TenantId)
+                .Header("X-3E-InstanceId", context.TenantId)
                 .QueryParam("orderby", "Client")
                 .QueryParam("ascending", true)
                 .QueryParam("page", "1")
@@ -194,8 +192,8 @@ namespace APITestAutomationTest.PPSProforma
             {
                 return Given()
                 .OAuth2(ppsToken)
-                .Header("x-3e-tenantid", tenant)
-                .Header("X-3E-InstanceId", tenant)
+                .Header("x-3e-tenantid", context.TenantId)
+                .Header("X-3E-InstanceId", context.TenantId)
                 .QueryParam("orderby", "Client")
                 .QueryParam("ascending", true)
                 .QueryParam("page", "1")

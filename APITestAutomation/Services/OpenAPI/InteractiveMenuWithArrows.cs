@@ -109,7 +109,7 @@ namespace APITestAutomation.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("❌ No profiles found. Please create a profile first.");
-                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomation", "Profiles"))}");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomationTest", "Profiles"))}");
                 PauseForUser();
                 return;
             }
@@ -292,7 +292,7 @@ namespace APITestAutomation.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("No profiles found.");
-                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomation", "Profiles"))}");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomationTest", "Profiles"))}");
             }
             else
             {

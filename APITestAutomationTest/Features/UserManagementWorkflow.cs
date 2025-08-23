@@ -17,11 +17,11 @@ namespace APITestAutomationTest.Features
 
         [Test]
         [Category("BDD")]
-        [TestCase("ptpd68r3nke7q5pnutzaaw", "PPSAutoTestUser0")]
-        public void CompleteUserManagementWorkflow(string tenant, string userId)
+        public void CompleteUserManagementWorkflow()
         {
+            var context = GetTestContext();
             // Initialize context
-            _steps.InitializeContext(tenant, userId, "https://api.example.com/v1");
+            _steps.InitializeContext(context.TenantId, context.UserId, GetBaseUrl());
             
             // Authenticate
             _steps.AuthenticateUser();
@@ -62,11 +62,11 @@ namespace APITestAutomationTest.Features
 
         [Test]
         [Category("BDD")]
-        [TestCase("ptpd68r3nke7q5pnutzaaw", "PPSAutoTestUser0")]
-        public void UserAuthorizationWorkflow(string tenant, string userId)
+        public void UserAuthorizationWorkflow()
         {
+            var context = GetTestContext();
             // Initialize context without authentication
-            _steps.InitializeContext(tenant, userId, "https://api.example.com/v1");
+            _steps.InitializeContext(context.TenantId, context.UserId, GetBaseUrl());
             
             // Try to access protected endpoint without auth
             _steps.ExecuteGetRequest("users");

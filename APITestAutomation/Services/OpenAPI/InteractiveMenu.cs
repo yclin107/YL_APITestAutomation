@@ -568,7 +568,7 @@ namespace APITestAutomation.Services.OpenAPI
         {
             var currentDir = AppContext.BaseDirectory;
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            var profilesPath = Path.Combine(projectRoot, "APITestAutomation", "Profiles");
+            var profilesPath = Path.Combine(projectRoot, "APITestAutomationTest", "Profiles");
             return Path.GetFullPath(profilesPath);
         }
 
