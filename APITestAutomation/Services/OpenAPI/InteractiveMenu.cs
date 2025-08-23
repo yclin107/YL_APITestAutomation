@@ -1,5 +1,5 @@
 using APITestAutomation.Services.OpenAPI;
-using APITestAutomationTest.Services;
+using APITestAutomation.Services;
 using System.Diagnostics;
 using System.Text;
 
