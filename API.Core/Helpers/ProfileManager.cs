@@ -49,47 +49,25 @@ namespace API.Core.Helpers
 
         public async Task SaveProfileAsync(TenantProfile profile, string team, string environment, string tenantId, string? masterPassword = null)
         {
-            // Always read the current file content to preserve exact structure
-            var filePath = Path.Combine(_profilesPath, team, environment, $"{tenantId}.json");
-            string currentContent = "";
+            var options = new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNameCaseInsensitive = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            var content = JsonSerializer.Serialize(profile, options);
             
-            if (File.Exists(filePath))
-            {
-                currentContent = await File.ReadAllTextAsync(filePath);
-                
-                // If file is encrypted, decrypt it first to get the current structure
-                if (IsEncrypted(currentContent))
-                {
-                    if (string.IsNullOrEmpty(masterPassword))
-                        throw new InvalidOperationException("Profile is encrypted but no master password provided for reading current content");
-                    
-                    currentContent = DecryptContent(currentContent, masterPassword);
-                }
-            }
-            else
-            {
-                // If file doesn't exist, serialize the profile normally
-                var options = new JsonSerializerOptions 
-                { 
-                    WriteIndented = true,
-                    PropertyNameCaseInsensitive = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-                currentContent = JsonSerializer.Serialize(profile, options);
-            }
-            
-            // Now encrypt the current content if password is provided
-            var finalContent = currentContent;
             if (!string.IsNullOrEmpty(masterPassword))
             {
-                finalContent = EncryptContent(currentContent, masterPassword);
+                content = EncryptContent(content, masterPassword);
             }
 
             var dirPath = Path.Combine(_profilesPath, team, environment);
             Directory.CreateDirectory(dirPath);
             
-            await File.WriteAllTextAsync(filePath, finalContent);
+            var filePath = Path.Combine(dirPath, $"{tenantId}.json");
+            await File.WriteAllTextAsync(filePath, content);
         }
 
         public async Task EncryptProfileAsync(string team, string environment, string tenantId, string masterPassword)
@@ -130,26 +108,6 @@ namespace API.Core.Helpers
             // Decrypt and save the exact original content
             var decryptedContent = DecryptContent(currentContent, masterPassword);
             await File.WriteAllTextAsync(filePath, decryptedContent);
-        }
-            var options = new JsonSerializerOptions 
-            { 
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-            var content = JsonSerializer.Serialize(profile, options);
-            
-            if (!string.IsNullOrEmpty(masterPassword))
-            {
-                content = EncryptContent(content, masterPassword);
-            }
-
-            var dirPath = Path.Combine(_profilesPath, team, environment);
-            Directory.CreateDirectory(dirPath);
-            
-            var filePath = Path.Combine(dirPath, $"{tenantId}.json");
-            await File.WriteAllTextAsync(filePath, content);
         }
 
         public async Task<List<string>> GetAvailableProfilesAsync()
