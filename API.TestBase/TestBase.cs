@@ -85,18 +85,17 @@ namespace API.TestBase
 
         protected string GetAuthToken(TestContext context)
         {
-            return TokenService.PPSProformaToken(
+            return API.Core.Helpers.TokenService.PPSProformaToken(
                 context.TenantId, 
-                new API.Core.Helpers.ConfigSetup.UserConfig
+                new API.Core.Helpers.UserConfig
                 {
                     LoginId = context.User.LoginId, 
-                    Username = context.User.Username,
                     FirstName = context.User.FirstName,
                     LastName = context.User.LastName,
-                    PasswordEnvVar = context.User.Password,
+                    Password = context.User.Password,
                     DefaultTimekeeperIndex = context.User.DefaultTimekeeperIndex,
                     DefaultTimekeeperNumber = context.User.DefaultTimekeeperNumber
-                });
+                }).Result;
         }
 
         protected void InitContext(string tenat, string userId, string? feature = null)
