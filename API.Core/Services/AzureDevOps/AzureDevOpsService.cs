@@ -673,4 +673,98 @@ namespace API.Core.Services.AzureDevOps
         public List<string> Errors { get; set; } = new();
         public List<SyncedWorkItem> SyncedItems { get; set; } = new();
     }
+
+    public async Task<List<WorkItemSyncResult>> GetSyncHistoryAsync()
+    {
+        var historyPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "sync-history.json");
+        
+        if (!File.Exists(historyPath))
+        {
+            return new List<WorkItemSyncResult>();
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(historyPath);
+            var history = JsonSerializer.Deserialize<List<SyncHistoryEntry>>(json) ?? new List<SyncHistoryEntry>();
+            
+            return history.Select(h => new WorkItemSyncResult
+            {
+                CreatedStories = h.CreatedStories,
+                UpdatedStories = h.UpdatedStories,
+                DeletedStories = h.DeletedStories,
+                CreatedTestCases = h.CreatedTestCases,
+                UpdatedTestCases = h.UpdatedTestCases,
+                DeletedTestCases = h.DeletedTestCases,
+                Errors = h.Errors,
+                SyncedItems = h.SyncedItems
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️  Could not load sync history: {ex.Message}");
+            return new List<WorkItemSyncResult>();
+        }
+    }
+
+    private async Task SaveSyncHistoryAsync(WorkItemSyncResult result, string specificationPath)
+    {
+        var historyPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "sync-history.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(historyPath)!);
+
+        var history = await GetSyncHistoryAsync();
+        
+        var newEntry = new SyncHistoryEntry
+        {
+            Timestamp = DateTime.UtcNow,
+            SpecificationPath = specificationPath,
+            CreatedStories = result.CreatedStories,
+            UpdatedStories = result.UpdatedStories,
+            DeletedStories = result.DeletedStories,
+            CreatedTestCases = result.CreatedTestCases,
+            UpdatedTestCases = result.UpdatedTestCases,
+            DeletedTestCases = result.DeletedTestCases,
+            Errors = result.Errors,
+            SyncedItems = result.SyncedItems
+        };
+
+        var historyEntries = history.Select(h => new SyncHistoryEntry
+        {
+            Timestamp = DateTime.UtcNow, // This should be preserved from original
+            SpecificationPath = specificationPath,
+            CreatedStories = h.CreatedStories,
+            UpdatedStories = h.UpdatedStories,
+            DeletedStories = h.DeletedStories,
+            CreatedTestCases = h.CreatedTestCases,
+            UpdatedTestCases = h.UpdatedTestCases,
+            DeletedTestCases = h.DeletedTestCases,
+            Errors = h.Errors,
+            SyncedItems = h.SyncedItems
+        }).ToList();
+
+        historyEntries.Insert(0, newEntry); // Add newest first
+        
+        // Keep only last 50 entries
+        if (historyEntries.Count > 50)
+        {
+            historyEntries = historyEntries.Take(50).ToList();
+        }
+
+        var json = JsonSerializer.Serialize(historyEntries, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(historyPath, json);
+    }
+
+    private class SyncHistoryEntry
+    {
+        public DateTime Timestamp { get; set; }
+        public string SpecificationPath { get; set; } = string.Empty;
+        public int CreatedStories { get; set; }
+        public int UpdatedStories { get; set; }
+        public int DeletedStories { get; set; }
+        public int CreatedTestCases { get; set; }
+        public int UpdatedTestCases { get; set; }
+        public int DeletedTestCases { get; set; }
+        public List<string> Errors { get; set; } = new();
+        public List<SyncedWorkItem> SyncedItems { get; set; } = new();
+    }
 }
