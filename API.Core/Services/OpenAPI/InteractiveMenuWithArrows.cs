@@ -251,13 +251,15 @@ pause > nul";
 cd /d ""{GetSolutionRoot()}""
 set TEST_PROFILE={selectedProfile}
 set ALLURE_RESULTS_DIRECTORY={allureResultsPath}
+set THREAD_ID={i}
+set ALLURE_RESULTS_DIRECTORY={allureResultsPath}
 title API Tests - {threadId}
 echo 🧵 {threadId}: Running tests with profile: {selectedProfile} 
 echo 📊 {threadId}: Results will be saved to: {allureResultsPath}
 echo ⚡ {threadId}: Thread {i} of {threads}
 echo 👤 {threadId}: User will be assigned automatically via round-robin
 echo.
-dotnet test API.TestBase --logger ""allure;LogLevel=trace"" --maxcpucount:1 --parallel{(string.IsNullOrEmpty(threadFilter) ? "" : $" --filter \"{threadFilter}\"")}
+dotnet test API.TestBase --settings NUnit.runsettings --logger ""allure;LogLevel=trace""{(string.IsNullOrEmpty(threadFilter) ? "" : $" --filter \"{threadFilter}\"")}
 echo.
 echo ✅ {threadId}: Tests completed! Press any key to close...
 pause > nul";

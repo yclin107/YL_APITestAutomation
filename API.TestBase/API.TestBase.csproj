@@ -38,9 +38,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="NUnit.runsettings">
+    <None Include="../NUnit.runsettings">
+      <Link>NUnit.runsettings</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    </None>
   </ItemGroup>
 
 </Project>
