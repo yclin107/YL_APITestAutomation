@@ -14,7 +14,7 @@ namespace API.Core.Services.AzureDevOps
 {
     public class AzureDevOpsService
     {
-        private readonly AzureDevOpsConfig _config;
+        private AzureDevOpsConfig? _config;
         private VssConnection? _connection;
         private WorkItemTrackingHttpClient? _witClient;
         private readonly string _configPath;
