@@ -7,6 +7,7 @@ using API.Core.Models;
 using System.Text.Json;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Microsoft.VisualStudio.Services.WebApi.Patch;
+using WorkItemTemplate = API.Core.Models.AzureDevOps.WorkItemTemplate;
 
 namespace API.Core.Services.AzureDevOps
 {
