@@ -18,7 +18,8 @@ namespace API.Core.Services.OpenAPI
             var content = await File.ReadAllTextAsync(filePath);
             
             OpenApiDocument document;
-                        document = reader.Read(json, out var diagnostic);
+            OpenApiDiagnostic diagnostic;
+
             try
             {
                 if (filePath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || 
@@ -27,7 +28,7 @@ namespace API.Core.Services.OpenAPI
                     // Convert YAML to JSON first
                     var deserializer = new DeserializerBuilder().Build();
                     var yamlObject = deserializer.Deserialize(content);
-                        document = reader.Read(content, out var diagnostic);
+                    var serializer = new SerializerBuilder().JsonCompatible().Build();
                     var json = serializer.Serialize(yamlObject);
                     
                     var reader = new OpenApiStringReader(new OpenApiReaderSettings
@@ -35,7 +36,7 @@ namespace API.Core.Services.OpenAPI
                         ReferenceResolution = ReferenceResolutionSetting.ResolveLocalReferences,
                         LoadExternalRefs = false
                     });
-                    document = reader.Read(json, out var diagnostic);
+                    document = reader.Read(json, out diagnostic);
                 }
                 else
                 {
@@ -44,7 +45,7 @@ namespace API.Core.Services.OpenAPI
                         ReferenceResolution = ReferenceResolutionSetting.ResolveLocalReferences,
                         LoadExternalRefs = false
                     });
-                    document = reader.Read(content, out var diagnostic);
+                    document = reader.Read(content, out diagnostic);
                 }
                 
                 // Log any diagnostic issues
@@ -112,7 +113,7 @@ namespace API.Core.Services.OpenAPI
                             Required = p.Required,
                             Schema = CreateSimpleSchema(p.Schema)
                         }).ToList() ?? new List<OpenApiParameter>(),
-                        Responses = CreateSimpleResponses(operation.Value.Responses),
+                        Responses = operation.Value.Responses?.ToDictionary(r => r.Key, r => r.Value) ?? new Dictionary<string, OpenApiResponse>(),
                         RequestBody = operation.Value.RequestBody != null ? new OpenApiRequestBody
                         {
                             Required = operation.Value.RequestBody.Required,
@@ -150,40 +151,6 @@ namespace API.Core.Services.OpenAPI
                 Format = originalSchema.Format,
                 Description = originalSchema.Description
             };
-        }
-        
-        private static Dictionary<string, OpenApiResponse> CreateSimpleResponses(IDictionary<string, OpenApiResponse>? originalResponses)
-        {
-            if (originalResponses == null) return new Dictionary<string, OpenApiResponse>();
-            
-            var simpleResponses = new Dictionary<string, OpenApiResponse>();
-            
-            foreach (var response in originalResponses)
-            {
-                // Create a simple response without potential circular references
-                var simpleResponse = new OpenApiResponse
-                {
-                    Description = response.Value.Description,
-                    Content = new Dictionary<string, OpenApiMediaType>()
-                };
-                
-                // Copy content types but simplify schemas
-                if (response.Value.Content != null)
-                {
-                    foreach (var content in response.Value.Content)
-                    {
-                        var simpleMediaType = new OpenApiMediaType
-                        {
-                            Schema = CreateSimpleSchema(content.Value.Schema)
-                        };
-                        simpleResponse.Content[content.Key] = simpleMediaType;
-                    }
-                }
-                
-                simpleResponses[response.Key] = simpleResponse;
-            }
-            
-            return simpleResponses;
         }
     }
 }
