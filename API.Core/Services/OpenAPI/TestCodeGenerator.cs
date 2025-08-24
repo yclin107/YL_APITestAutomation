@@ -142,9 +142,9 @@ namespace API.Core.Services.OpenAPI
                 var jsonContent = response.Content?.FirstOrDefault(c => 
                     c.Key.Contains("application/json") || c.Key.Contains("json"));
                 
-                if (jsonContent?.Value?.Schema != null)
+                if (jsonContent.HasValue && jsonContent.Value.Value?.Schema != null)
                 {
-                    return ConvertOpenApiSchemaToJsonSchema(jsonContent.Value.Schema);
+                    return ConvertOpenApiSchemaToJsonSchema(jsonContent.Value.Value.Schema);
                 }
                 
                 // Fallback to generic object schema

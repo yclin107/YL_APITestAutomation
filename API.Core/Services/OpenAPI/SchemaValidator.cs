@@ -1,6 +1,5 @@
 using Microsoft.OpenApi.Models;
 using NJsonSchema;
-using NJsonSchema.Generation;
 using NJsonSchema.Validation;
 using System.Text.Json;
 
@@ -9,19 +8,9 @@ namespace API.Core.Services.OpenAPI
     public class SchemaValidator
     {
         private readonly Dictionary<string, JsonSchema> _schemaCache = new();
-        private readonly JsonSchemaGenerator _schemaGenerator;
 
         public SchemaValidator()
         {
-            var settings = new JsonSchemaGeneratorSettings
-            {
-                SerializerSettings = new Newtonsoft.Json.JsonSerializerSettings
-                {
-                    NullValueHandling = Newtonsoft.Json.NullValueHandling.Include,
-                    DateFormatHandling = Newtonsoft.Json.DateFormatHandling.IsoDateFormat
-                }
-            };
-            _schemaGenerator = new JsonSchemaGenerator(settings);
         }
 
         public async Task<JsonSchema?> GenerateSchemaFromOpenApiAsync(OpenApiSchema openApiSchema, string schemaKey)
