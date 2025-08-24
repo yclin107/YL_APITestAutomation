@@ -18,7 +18,7 @@ namespace API.Core.Services.OpenAPI
             var content = await File.ReadAllTextAsync(filePath);
             
             OpenApiDocument document;
-            
+                        document = reader.Read(json, out var diagnostic);
             try
             {
                 if (filePath.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || 
@@ -27,7 +27,7 @@ namespace API.Core.Services.OpenAPI
                     // Convert YAML to JSON first
                     var deserializer = new DeserializerBuilder().Build();
                     var yamlObject = deserializer.Deserialize(content);
-                    var serializer = new SerializerBuilder().JsonCompatible().Build();
+                        document = reader.Read(content, out var diagnostic);
                     var json = serializer.Serialize(yamlObject);
                     
                     var reader = new OpenApiStringReader(new OpenApiReaderSettings
