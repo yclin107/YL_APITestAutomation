@@ -89,15 +89,11 @@ namespace API.Core.Services.OpenAPI
         private static Dictionary<string, OpenApiEndpointTest> ExtractEndpointTests(OpenApiDocument document)
         {
             var endpointTests = new Dictionary<string, OpenApiEndpointTest>();
-            
-            Console.WriteLine($"🔍 Processing {document.Paths?.Count ?? 0} paths from OpenAPI document...");
 
             foreach (var path in document.Paths)
             {
-                Console.WriteLine($"📁 Processing path: {path.Key}");
                 foreach (var operation in path.Value.Operations)
                 {
-                    Console.WriteLine($"   🔧 Processing operation: {operation.Key} {path.Key}");
                     var key = $"{operation.Key.ToString().ToUpper()}:{path.Key}";
                     var endpointTest = new OpenApiEndpointTest
                     {
@@ -125,11 +121,8 @@ namespace API.Core.Services.OpenAPI
                     };
 
                     endpointTests[key] = endpointTest;
-                    Console.WriteLine($"   ✅ Added endpoint: {key}");
                 }
             }
-            
-            Console.WriteLine($"✅ Processed {endpointTests.Count} total endpoints");
 
             return endpointTests;
         }

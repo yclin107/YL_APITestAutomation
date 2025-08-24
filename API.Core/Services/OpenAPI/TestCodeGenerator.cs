@@ -3,6 +3,7 @@ using System.Text;
 using System.Net;
 using API.Core.Models;
 using System.Text.Json;
+using NJsonSchema;
 
 namespace API.Core.Services.OpenAPI
 {
@@ -68,23 +69,16 @@ namespace API.Core.Services.OpenAPI
                 var methodName = SanitizeIdentifier(endpoint.Method + "_" + endpoint.Path);
                 var schemaKey = $"{endpoint.Method}:{endpoint.Path}";
                 
-                Console.WriteLine($"🔍 DEBUG: Processing endpoint {endpoint.Method} {endpoint.Path}");
-                Console.WriteLine($"📋 Available responses: {string.Join(", ", endpoint.Responses.Keys)}");
-                
                 // Try to get schema from successful responses (200, 201, etc.)
                 var successResponse = endpoint.Responses.FirstOrDefault(r => r.Key.StartsWith("2"));
                 
-                Console.WriteLine($"🎯 Success response found: {successResponse.Key ?? "None"}");
-                
                 if (!string.IsNullOrEmpty(successResponse.Key) && successResponse.Value != null)
                 {
-                    Console.WriteLine($"✅ Generating schema validation for {successResponse.Key}");
                     GenerateSchemaValidationMethod(sb, methodName, schemaKey, successResponse.Value, spec);
                 }
                 else
                 {
                     // Generate a basic validation method if no schema is available
-                    Console.WriteLine($"⚠️  No success response found, generating basic validation");
                     GenerateBasicValidationMethod(sb, methodName);
                 }
             }
@@ -95,8 +89,6 @@ namespace API.Core.Services.OpenAPI
 
         private static void GenerateSchemaValidationMethod(StringBuilder sb, string methodName, string schemaKey, OpenApiResponse response, OpenApiTestSpec spec)
         {
-            Console.WriteLine($"🔧 Generating schema validation method for: {methodName}");
-            
             sb.AppendLine($"        private async Task ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
             
@@ -105,16 +97,14 @@ namespace API.Core.Services.OpenAPI
             
             var isRealSchema = !schemaJson.Contains("\"description\": \"Generic response schema\"") && 
                               !schemaJson.Contains("\"description\": \"Fallback response schema\"");
-            
-            Console.WriteLine($"📋 Final schema for {methodName}: {(isRealSchema ? "REAL SCHEMA" : "GENERIC (no real schema)")}");
-            
+
             if (isRealSchema)
             {
                 // Generate real schema validation
                 sb.AppendLine("            try");
                 sb.AppendLine("            {");
                 sb.AppendLine($"                var schemaJson = @\"{EscapeJsonForString(schemaJson)}\";");
-                sb.AppendLine("                var schema = await JsonSchema.FromJsonAsync(schemaJson);");
+                sb.AppendLine("                var schema = await NJsonSchema.JsonSchema.FromJsonAsync(schemaJson);");
                 sb.AppendLine("                var validator = new JsonSchemaValidator();");
                 sb.AppendLine("                var errors = validator.Validate(jsonResponse, schema);");
                 sb.AppendLine();
@@ -126,7 +116,7 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("                }");
                 sb.AppendLine("                else");
                 sb.AppendLine("                {");
-                sb.AppendLine("                    Console.WriteLine($\"✅ Schema validation passed for {methodName}\");");
+                sb.AppendLine($"                    Console.WriteLine(\"✅ Schema validation passed for {methodName}\");");
                 if (schemaJson.Contains("too complex") || schemaJson.Contains("Simplified schema"))
                 {
                     sb.AppendLine("                    // NOTE: Schema was simplified due to complexity - consider manual validation for critical fields");
@@ -147,7 +137,7 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("            {");
                 sb.AppendLine("                JsonDocument.Parse(jsonResponse);");
                 sb.AppendLine("                Assert.That(string.IsNullOrEmpty(jsonResponse), Is.False, \"Response should not be empty\");");
-                sb.AppendLine("                Console.WriteLine($\"⚠️  Basic validation only for {methodName} - no schema in OpenAPI spec\");");
+                sb.AppendLine($"                Console.WriteLine(\"⚠️  Basic validation only for {methodName} - no schema in OpenAPI spec\");");
                 sb.AppendLine("            }");
                 sb.AppendLine("            catch (JsonException ex)");
                 sb.AppendLine("            {");
@@ -179,21 +169,15 @@ namespace API.Core.Services.OpenAPI
 
         private static string GenerateSchemaFromResponse(OpenApiResponse response, OpenApiTestSpec spec, string schemaKey)
         {
-            Console.WriteLine($"🔍 DEBUG: Generating schema from response for {schemaKey}...");
-            
             if (response == null)
             {
-                Console.WriteLine($"❌ Response is null for {schemaKey}");
                 return CreateFallbackSchema("Response is null");
             }
-            
-            Console.WriteLine($"📋 Response content types: {string.Join(", ", response.Content?.Keys ?? Array.Empty<string>())}");
             
             try
             {
                 if (response.Content == null || !response.Content.Any())
                 {
-                    Console.WriteLine($"❌ No content found in response");
                     return CreateFallbackSchema("No content in response");
                 }
 
@@ -203,40 +187,30 @@ namespace API.Core.Services.OpenAPI
                     c.Key.Contains("json", StringComparison.OrdinalIgnoreCase) ||
                     c.Key.Contains("application/json", StringComparison.OrdinalIgnoreCase));
                 
-                Console.WriteLine($"🔍 JSON Content found: {jsonContent.Key != null}");
-                
                 if (jsonContent.Key == null)
                 {
-                    Console.WriteLine($"❌ No JSON content type found. Available: {string.Join(", ", response.Content.Keys)}");
                     return CreateFallbackSchema("No JSON content type");
                 }
                 
                 var mediaType = jsonContent.Value;
                 if (mediaType?.Schema == null)
                 {
-                    Console.WriteLine($"❌ No schema found in media type");
                     return CreateFallbackSchema("No schema in media type");
                 }
 
                 var schema = mediaType.Schema;
-                Console.WriteLine($"✅ Schema found! Type: {schema.Type ?? "undefined"}");
-                Console.WriteLine($"📝 Properties count: {schema.Properties?.Count ?? 0}");
-                Console.WriteLine($"🔗 Reference: {schema.Reference?.Id ?? "none"}");
                 
                 // Handle schema references
                 if (schema.Reference != null)
                 {
-                    Console.WriteLine($"🔗 Resolving schema reference: {schema.Reference.Id}");
                     var resolvedSchema = ResolveSchemaReference(schema.Reference, spec);
                     if (resolvedSchema != null)
                     {
                         schema = resolvedSchema;
-                        Console.WriteLine($"✅ Reference resolved! Type: {schema.Type ?? "undefined"}");
                     }
                 }
                 
                 var convertedSchema = ConvertOpenApiSchemaToJsonSchema(schema, schemaKey);
-                Console.WriteLine($"🎯 Generated schema length: {convertedSchema.Length} characters");
                 
                 // Validate that we have a meaningful schema
                 if (convertedSchema.Contains("\"type\"") && 
@@ -247,18 +221,15 @@ namespace API.Core.Services.OpenAPI
                      schema.Type == "integer" || 
                      schema.Type == "boolean"))
                 {
-                    Console.WriteLine($"✅ Real schema generated successfully");
                     return convertedSchema;
                 }
                 else
                 {
-                    Console.WriteLine($"⚠️  Schema seems empty or invalid, using fallback");
                     return CreateFallbackSchema("Schema validation failed");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error generating schema: {ex.Message}");
                 return CreateFallbackSchema($"Error: {ex.Message}");
             }
         }
@@ -269,33 +240,27 @@ namespace API.Core.Services.OpenAPI
             {
                 if (spec.Document?.Components?.Schemas == null)
                 {
-                    Console.WriteLine($"❌ No components/schemas found in document");
                     return null;
                 }
                 
                 var schemaName = reference.Id;
                 if (spec.Document.Components.Schemas.TryGetValue(schemaName, out var referencedSchema))
                 {
-                    Console.WriteLine($"✅ Found referenced schema: {schemaName}");
                     return referencedSchema;
                 }
                 else
                 {
-                    Console.WriteLine($"❌ Referenced schema not found: {schemaName}");
-                    Console.WriteLine($"📋 Available schemas: {string.Join(", ", spec.Document.Components.Schemas.Keys)}");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error resolving schema reference: {ex.Message}");
                 return null;
             }
         }
         
         private static string CreateFallbackSchema(string reason)
         {
-            Console.WriteLine($"⚠️  Creating fallback schema: {reason}");
             return @"{
                 ""type"": ""object"",
                 ""additionalProperties"": true,
@@ -311,7 +276,6 @@ namespace API.Core.Services.OpenAPI
                 var complexityScore = CalculateSchemaComplexity(openApiSchema);
                 if (complexityScore > 1000)
                 {
-                    Console.WriteLine($"⚠️  Schema too complex ({complexityScore} points), using simplified version");
                     return CreateSimplifiedSchema(openApiSchema, schemaKey);
                 }
                 
@@ -429,7 +393,6 @@ namespace API.Core.Services.OpenAPI
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️  Error converting OpenAPI schema: {ex.Message}");
                 return @"{
                     ""type"": ""object"",
                     ""additionalProperties"": true,
@@ -493,7 +456,7 @@ namespace API.Core.Services.OpenAPI
 
         private static string EscapeJsonForString(string json)
         {
-            return json.Replace("\"", "\\\"")
+            return json.Replace("\\", "\\\\").Replace("\"", "\\\"")
                       .Replace("\r", "")
                       .Replace("\n", "\\n")
                       .Replace("\t", "\\t");
