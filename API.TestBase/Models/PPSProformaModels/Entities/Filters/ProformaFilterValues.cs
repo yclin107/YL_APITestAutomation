@@ -5,21 +5,21 @@ namespace API.TestBase.Models.PPSProformaModels.Entities.Filters;
 
 public class ProformaFilterValues
 {
-    public IEnumerable<UserFilterItem> LockedBy { get; set; } = new List<UserFilterItem>();
+    public IEnumerable<UserFilterItem> LockedBy { get; set; }
 
-    public IEnumerable<string> ClientNames { get; set; } = new List<string>();
+    public IEnumerable<string> ClientNames { get; set; }
 
-    public IEnumerable<string> ClientNumbers { get; set; } = new List<string>();
+    public IEnumerable<string> ClientNumbers { get; set; }
 
-    public IEnumerable<ProformaFilterMatter> Matters { get; set; } = new List<ProformaFilterMatter>();
+    public IEnumerable<ProformaFilterMatter> Matters { get; set; }
 
-    public IEnumerable<string> MatterNumbers { get; set; } = new List<string>();
+    public IEnumerable<string> MatterNumbers { get; set; }
 
-    public IEnumerable<string> MatterCurrencies { get; set; } = new List<string>();
+    public IEnumerable<string> MatterCurrencies { get; set; }
 
-    public IEnumerable<string> BillGroups { get; set; } = new List<string>();
+    public IEnumerable<string> BillGroups { get; set; }
 
     public bool ApprovalsPending { get; set; }
 
-    public IEnumerable<string> Owners { get; set; } = new List<string>();
+    public IEnumerable<string> Owners { get; set; }
 }

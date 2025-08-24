@@ -117,7 +117,7 @@ namespace API.Core.Services.OpenAPI
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "dotnet",
-                        Arguments = $"test --logger \"allure;LogLevel=trace\" --parallel {threads}" + 
+                        Arguments = $"test --logger:allure --parallel {threads}" + 
                                    (string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\""),
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -156,7 +156,7 @@ namespace API.Core.Services.OpenAPI
             PauseForUser();
         }
 
-        private void HandleGenerateReport()
+        private async Task HandleGenerateReport()
         {
             Console.Clear();
             Console.WriteLine("=== Generate Allure Report ===");
