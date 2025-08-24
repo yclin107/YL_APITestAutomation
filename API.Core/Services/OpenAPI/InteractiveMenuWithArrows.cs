@@ -184,8 +184,7 @@ namespace API.Core.Services.OpenAPI
             {
                 "test",
                 $"\"{GetTestProjectPath()}\"",
-                "--settings NUnit.runsettings",
-                "--logger \"allure;LogLevel=trace\""
+                "--settings NUnit.runsettings"
             };
 
             if (!string.IsNullOrEmpty(filter))
@@ -320,7 +319,7 @@ namespace API.Core.Services.OpenAPI
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error generating report: {ex.Message}");
-                Console.WriteLine("Make sure Allure is installed: npm install -g allure-commandline");
+                Console.WriteLine("Make sure Allure is installed");
             }
             
             PauseForUser();
