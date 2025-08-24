@@ -178,7 +178,7 @@ set TEST_PROFILE={selectedProfile}
 echo 🚀 Running tests with profile: {selectedProfile}
 echo 📊 Results will be saved to: {allureResultsPath}
 echo.
-dotnet test API.TestBase --logger ""allure;LogLevel=trace""{(string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\"")}
+dotnet test ""{(string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\"")}
 echo.
 echo ✅ Tests completed! Press any key to close...
 pause > nul";
@@ -226,7 +226,7 @@ echo 🧵 {threadId}: Running tests with profile: {selectedProfile}
 echo 📊 {threadId}: Results will be saved to: {allureResultsPath}
 echo ⚡ {threadId}: Thread {i} of {threads}
 echo.
-dotnet test API.TestBase --logger ""allure;LogLevel=trace"" --parallel{(string.IsNullOrEmpty(threadFilter) ? "" : $" --filter \"{threadFilter}\"")}
+dotnet test "" --parallel{(string.IsNullOrEmpty(threadFilter) ? "" : $" --filter \"{threadFilter}\"")}
 echo.
 echo ✅ {threadId}: Tests completed! Press any key to close...
 pause > nul";
