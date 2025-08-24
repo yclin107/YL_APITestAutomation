@@ -15,6 +15,7 @@ namespace API.Core.Services.AzureDevOps
     public class AzureDevOpsService
     {
         private readonly AzureDevOpsConfig _config;
+        private readonly VssConnection _connection;
         private readonly WorkItemTrackingHttpClient _witClient;
         private readonly string _configPath;
 
@@ -23,8 +24,8 @@ namespace API.Core.Services.AzureDevOps
             _configPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "devops-config.json");
             _config = LoadConfiguration();
             
-            var connection = new VssConnection(new Uri(_config.OrganizationUrl), new VssBasicCredential(string.Empty, _config.PersonalAccessToken));
-            _witClient = connection.GetClient<WorkItemTrackingHttpClient>();
+            _connection = new VssConnection(new Uri(_config.OrganizationUrl), new VssBasicCredential(string.Empty, _config.PersonalAccessToken));
+            _witClient = _connection.GetClient<WorkItemTrackingHttpClient>();
         }
 
         public async Task<WorkItemSyncResult> SyncOpenApiSpecAsync(OpenApiTestSpec spec)
