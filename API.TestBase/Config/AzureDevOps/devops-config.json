@@ -1,9 +1,9 @@
 {
-  "organizationUrl": "https://dev.azure.com/YourOrganization",
-  "projectName": "YourProject",
+  "organizationUrl": "https://dev.azure.com/tr-legal-3E",
+  "projectName": "3EProject",
   "personalAccessToken": "YOUR_PAT_TOKEN_HERE",
-  "areaPath": "YourProject\\API Tests",
-  "iterationPath": "YourProject",
+  "areaPath": "3EProject\\API Tests",
+  "iterationPath": "3EProject",
   "storyTemplate": {
     "workItemType": "User Story",
     "fields": {
