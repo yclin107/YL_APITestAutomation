@@ -522,7 +522,7 @@ namespace API.Core.Services.OpenAPI
                     WriteIndented = true 
                 });
                 
-                // Escape only quotes for verbatim string
+                // Escape quotes for verbatim string and preserve formatting
                 return formattedJson.Replace("\"", "\"\"");
             }
             catch
