@@ -31,29 +31,50 @@ namespace API.Core.Services.OpenAPI
             
             // Save current spec for future comparisons (without the full OpenAPI document to avoid cycles)
             var configFile = Path.Combine(_configPath, "current-spec.json");
-            var specForSerialization = new OpenApiTestSpecForSerialization
-            {
-                SpecificationPath = spec.SpecificationPath,
-                BaseUrl = spec.BaseUrl,
-                LastModified = spec.LastModified,
-                Version = spec.Version,
-                EndpointTests = spec.EndpointTests,
-                DocumentInfo = new OpenApiDocumentInfo
-                {
-                    Title = spec.Document.Info?.Title ?? "Unknown",
-                    Version = spec.Document.Info?.Version ?? "1.0.0",
-                    Description = spec.Document.Info?.Description ?? ""
-                }
-            };
             
-            var jsonOptions = new JsonSerializerOptions 
-            { 
-                WriteIndented = true,
-                ReferenceHandler = ReferenceHandler.IgnoreCycles,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            };
-            var json = JsonSerializer.Serialize(specForSerialization, jsonOptions);
-            await File.WriteAllTextAsync(configFile, json);
+            try
+            {
+                // Try to serialize a minimal version to avoid memory issues
+                var minimalSpec = new OpenApiTestSpecForSerialization
+                {
+                    SpecificationPath = spec.SpecificationPath,
+                    BaseUrl = spec.BaseUrl,
+                    LastModified = spec.LastModified,
+                    Version = spec.Version,
+                    EndpointTests = CreateMinimalEndpointTests(spec.EndpointTests),
+                    DocumentInfo = new OpenApiDocumentInfo
+                    {
+                        Title = spec.Document.Info?.Title ?? "Unknown",
+                        Version = spec.Document.Info?.Version ?? "1.0.0",
+                        Description = spec.Document.Info?.Description ?? ""
+                    }
+                };
+                
+                var jsonOptions = new JsonSerializerOptions 
+                { 
+                    WriteIndented = true,
+                    ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                };
+                var json = JsonSerializer.Serialize(minimalSpec, jsonOptions);
+                await File.WriteAllTextAsync(configFile, json);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Could not save spec for comparison (large file): {ex.Message}");
+                // Create a minimal file just with basic info
+                var basicInfo = new
+                {
+                    SpecificationPath = spec.SpecificationPath,
+                    BaseUrl = spec.BaseUrl,
+                    LastModified = spec.LastModified,
+                    Version = spec.Version,
+                    EndpointCount = spec.EndpointTests.Count,
+                    DocumentTitle = spec.Document.Info?.Title ?? "Unknown"
+                };
+                var basicJson = JsonSerializer.Serialize(basicInfo, new JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(configFile, basicJson);
+            }
             
             return spec;
         }
@@ -184,6 +205,37 @@ namespace API.Core.Services.OpenAPI
             await File.WriteAllTextAsync(configFile, json);
             
             return $"Tests generated successfully:\n" + string.Join("\n", generatedFiles.Select(f => $"- {f}"));
+        }
+
+        private Dictionary<string, OpenApiEndpointTest> CreateMinimalEndpointTests(Dictionary<string, OpenApiEndpointTest> originalTests)
+        {
+            var minimalTests = new Dictionary<string, OpenApiEndpointTest>();
+            
+            foreach (var test in originalTests)
+            {
+                minimalTests[test.Key] = new OpenApiEndpointTest
+                {
+                    Path = test.Value.Path,
+                    Method = test.Value.Method,
+                    OperationId = test.Value.OperationId,
+                    Summary = test.Value.Summary,
+                    Description = test.Value.Description,
+                    Tags = test.Value.Tags,
+                    RequiresAuth = test.Value.RequiresAuth,
+                    Parameters = test.Value.Parameters?.Select(p => new OpenApiParameter
+                    {
+                        Name = p.Name,
+                        In = p.In,
+                        Required = p.Required,
+                        Schema = p.Schema != null ? new OpenApiSchema { Type = p.Schema.Type } : null
+                    }).ToList() ?? new List<OpenApiParameter>(),
+                    // Don't copy full responses to avoid memory issues
+                    Responses = test.Value.Responses?.Keys.ToDictionary(k => k, k => new OpenApiResponse { Description = "Response" }) ?? new Dictionary<string, OpenApiResponse>(),
+                    SecuritySchemes = new Dictionary<string, OpenApiSecurityScheme>()
+                };
+            }
+            
+            return minimalTests;
         }
 
         private static string SanitizeForFileSystem(string name)

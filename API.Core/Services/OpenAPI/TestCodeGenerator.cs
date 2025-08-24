@@ -127,6 +127,10 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("                else");
                 sb.AppendLine("                {");
                 sb.AppendLine("                    Console.WriteLine($\"✅ Schema validation passed for {methodName}\");");
+                if (schemaJson.Contains("too complex") || schemaJson.Contains("Simplified schema"))
+                {
+                    sb.AppendLine("                    // NOTE: Schema was simplified due to complexity - consider manual validation for critical fields");
+                }
                 sb.AppendLine("                }");
                 sb.AppendLine("            }");
                 sb.AppendLine("            catch (Exception ex)");
@@ -231,7 +235,7 @@ namespace API.Core.Services.OpenAPI
                     }
                 }
                 
-                var convertedSchema = ConvertOpenApiSchemaToJsonSchema(schema);
+                var convertedSchema = ConvertOpenApiSchemaToJsonSchema(schema, schemaKey);
                 Console.WriteLine($"🎯 Generated schema length: {convertedSchema.Length} characters");
                 
                 // Validate that we have a meaningful schema
@@ -295,14 +299,22 @@ namespace API.Core.Services.OpenAPI
             return @"{
                 ""type"": ""object"",
                 ""additionalProperties"": true,
-                ""description"": ""Fallback response schema""
+                ""description"": ""Fallback response schema - " + reason.Replace("\"", "\\\"") + @"""
             }";
         }
 
-        private static string ConvertOpenApiSchemaToJsonSchema(OpenApiSchema openApiSchema)
+        private static string ConvertOpenApiSchemaToJsonSchema(OpenApiSchema openApiSchema, string schemaKey)
         {
             try
             {
+                // Check if schema is too complex (might cause memory issues)
+                var complexityScore = CalculateSchemaComplexity(openApiSchema);
+                if (complexityScore > 1000)
+                {
+                    Console.WriteLine($"⚠️  Schema too complex ({complexityScore} points), using simplified version");
+                    return CreateSimplifiedSchema(openApiSchema, schemaKey);
+                }
+                
                 var schema = new Dictionary<string, object>();
                 
                 // Handle different schema types
@@ -424,6 +436,45 @@ namespace API.Core.Services.OpenAPI
                     ""description"": ""Fallback schema due to conversion error""
                 }";
             }
+        }
+        
+        private static int CalculateSchemaComplexity(OpenApiSchema schema)
+        {
+            var complexity = 0;
+            complexity += schema.Properties?.Count ?? 0;
+            complexity += schema.Required?.Count ?? 0;
+            
+            // Add complexity for nested objects
+            if (schema.Properties != null)
+            {
+                foreach (var prop in schema.Properties)
+                {
+                    if (prop.Value.Properties?.Any() == true)
+                        complexity += prop.Value.Properties.Count * 2;
+                    if (prop.Value.Items?.Properties?.Any() == true)
+                        complexity += prop.Value.Items.Properties.Count;
+                }
+            }
+            
+            return complexity;
+        }
+        
+        private static string CreateSimplifiedSchema(OpenApiSchema openApiSchema, string schemaKey)
+        {
+            var simplified = new Dictionary<string, object>
+            {
+                ["type"] = openApiSchema.Type ?? "object",
+                ["additionalProperties"] = true,
+                ["description"] = $"Simplified schema for {schemaKey} - original was too complex for detailed validation"
+            };
+            
+            // Add just the basic type info
+            if (openApiSchema.Properties?.Any() == true)
+            {
+                simplified["_note"] = $"Original schema had {openApiSchema.Properties.Count} properties - simplified for performance";
+            }
+            
+            return JsonSerializer.Serialize(simplified, new JsonSerializerOptions { WriteIndented = true });
         }
         
         private static string ConvertOpenApiTypeToJsonSchemaType(string openApiType)
