@@ -42,6 +42,13 @@ namespace API.TestBase
                     if (parts.Length != 3)
                         throw new InvalidOperationException($"Invalid profile path format. Expected: team/environment/tenantId, got: {profilePath}");
                     
+                    // Auto-decrypt if MASTER_PASSWORD is provided
+                    if (!string.IsNullOrEmpty(masterPassword))
+                    {
+                        Console.WriteLine("🔓 Auto-decrypting profiles...");
+                        _profileManager.DecryptAllProfilesAsync(masterPassword).Wait();
+                    }
+                    
                     _currentProfile = _profileManager.LoadProfileAsync(parts[0], parts[1], parts[2], masterPassword).Result;
                     if (_currentProfile == null)
                     {
