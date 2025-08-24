@@ -285,15 +285,6 @@ namespace API.Core.Services.OpenAPI
                 ""description"": ""Fallback response schema""
             }";
         }
-                    
-                    var openApiSchema = jsonContent.Value.Value.Schema;
-                    var convertedSchema = ConvertOpenApiSchemaToJsonSchema(openApiSchema);
-                    Console.WriteLine($"🎯 Generated schema: {convertedSchema.Substring(0, Math.Min(200, convertedSchema.Length))}...");
-                    return convertedSchema;
-                }
-                else
-                {
-        }
 
         private static string ConvertOpenApiSchemaToJsonSchema(OpenApiSchema openApiSchema)
         {
