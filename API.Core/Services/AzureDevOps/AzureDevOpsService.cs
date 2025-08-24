@@ -473,129 +473,167 @@ namespace API.Core.Services.AzureDevOps
                 }
             }
         }
-    }
 
-    public async Task<bool> TestConnectionAsync()
-    {
-        try
+        public async Task<bool> TestConnectionAsync()
         {
-            Console.WriteLine("🔌 Testing Azure DevOps connection...");
-            Console.WriteLine($"📋 Organization: {_config.OrganizationUrl}");
-            Console.WriteLine($"📁 Project: {_config.ProjectName}");
-            Console.WriteLine();
-
-            // Test 1: Get project info
-            Console.Write("1. Testing project access... ");
-            var projectClient = _witClient.VssConnection.GetClient<ProjectHttpClient>();
-            var project = await projectClient.GetProject(_config.ProjectName);
-            Console.WriteLine($"✅ Project found: {project.Name}");
-
-            // Test 2: Test work item queries
-            Console.Write("2. Testing work item access... ");
-            var wiql = new Wiql()
-            {
-                Query = $"SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{_config.ProjectName}' ORDER BY [System.Id] DESC"
-            };
-            var queryResult = await _witClient.QueryByWiqlAsync(wiql, top: 1);
-            Console.WriteLine($"✅ Query successful ({queryResult.WorkItems.Count()} items found)");
-
-            // Test 3: Test area path
-            Console.Write("3. Testing area path... ");
             try
             {
-                // Just validate the format, don't fail if area doesn't exist
-                if (string.IsNullOrEmpty(_config.AreaPath) || !_config.AreaPath.Contains(_config.ProjectName))
-                {
-                    Console.WriteLine($"⚠️  Area path format may be incorrect: {_config.AreaPath}");
-                }
-                else
-                {
-                    Console.WriteLine($"✅ Area path format valid: {_config.AreaPath}");
-                }
-            }
-            catch
-            {
-                Console.WriteLine($"⚠️  Could not validate area path: {_config.AreaPath}");
-            }
+                Console.WriteLine("🔌 Testing Azure DevOps connection...");
+                Console.WriteLine($"📋 Organization: {_config.OrganizationUrl}");
+                Console.WriteLine($"📁 Project: {_config.ProjectName}");
+                Console.WriteLine();
 
-            // Test 4: Test work item creation permissions
-            Console.Write("4. Testing work item creation permissions... ");
-            try
-            {
-                // Try to create a minimal test work item and immediately delete it
-                var testDoc = new JsonPatchDocument();
-                testDoc.Add(new JsonPatchOperation()
-                {
-                    Operation = Operation.Add,
-                    Path = "/fields/System.WorkItemType",
-                    Value = "Task"
-                });
-                testDoc.Add(new JsonPatchOperation()
-                {
-                    Operation = Operation.Add,
-                    Path = "/fields/System.Title",
-                    Value = "Connection Test - DELETE ME"
-                });
-                testDoc.Add(new JsonPatchOperation()
-                {
-                    Operation = Operation.Add,
-                    Path = "/fields/System.Description",
-                    Value = "This is a connection test work item. It will be deleted immediately."
-                });
+                // Test 1: Get project info
+                Console.Write("1. Testing project access... ");
+                var projectClient = _witClient.VssConnection.GetClient<ProjectHttpClient>();
+                var project = await projectClient.GetProject(_config.ProjectName);
+                Console.WriteLine($"✅ Project found: {project.Name}");
 
-                var testWorkItem = await _witClient.CreateWorkItemAsync(testDoc, _config.ProjectName, "Task");
+                // Test 2: Test work item queries
+                Console.Write("2. Testing work item access... ");
+                var wiql = new Wiql()
+                {
+                    Query = $"SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{_config.ProjectName}' ORDER BY [System.Id] DESC"
+                };
+                var queryResult = await _witClient.QueryByWiqlAsync(wiql, top: 1);
+                Console.WriteLine($"✅ Query successful ({queryResult.WorkItems.Count()} items found)");
+
+                // Test 3: Test area path
+                Console.Write("3. Testing area path... ");
+                try
+                {
+                    // Just validate the format, don't fail if area doesn't exist
+                    if (string.IsNullOrEmpty(_config.AreaPath) || !_config.AreaPath.Contains(_config.ProjectName))
+                    {
+                        Console.WriteLine($"⚠️  Area path format may be incorrect: {_config.AreaPath}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"✅ Area path format valid: {_config.AreaPath}");
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine($"⚠️  Could not validate area path: {_config.AreaPath}");
+                }
+
+                // Test 4: Test work item creation permissions
+                Console.Write("4. Testing work item creation permissions... ");
+                try
+                {
+                    // Try to create a minimal test work item and immediately delete it
+                    var testDoc = new JsonPatchDocument();
+                    testDoc.Add(new JsonPatchOperation()
+                    {
+                        Operation = Operation.Add,
+                        Path = "/fields/System.WorkItemType",
+                        Value = "Task"
+                    });
+                    testDoc.Add(new JsonPatchOperation()
+                    {
+                        Operation = Operation.Add,
+                        Path = "/fields/System.Title",
+                        Value = "Connection Test - DELETE ME"
+                    });
+                    testDoc.Add(new JsonPatchOperation()
+                    {
+                        Operation = Operation.Add,
+                        Path = "/fields/System.Description",
+                        Value = "This is a connection test work item. It will be deleted immediately."
+                    });
+
+                    var testWorkItem = await _witClient.CreateWorkItemAsync(testDoc, _config.ProjectName, "Task");
+                    
+                    // Immediately delete the test work item
+                    await _witClient.DeleteWorkItemAsync(testWorkItem.Id.Value, destroy: true);
+                    
+                    Console.WriteLine("✅ Create/Delete permissions confirmed");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Permission test failed: {ex.Message}");
+                    return false;
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("🎉 All connection tests passed!");
+                Console.WriteLine("✅ Ready to sync OpenAPI specifications to Azure DevOps");
                 
-                // Immediately delete the test work item
-                await _witClient.DeleteWorkItemAsync(testWorkItem.Id.Value, destroy: true);
-                
-                Console.WriteLine("✅ Create/Delete permissions confirmed");
+                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Permission test failed: {ex.Message}");
+                Console.WriteLine($"❌ Connection test failed: {ex.Message}");
+                Console.WriteLine();
+                Console.WriteLine("💡 Common issues:");
+                Console.WriteLine("  • Invalid Personal Access Token (PAT)");
+                Console.WriteLine("  • Incorrect Organization URL");
+                Console.WriteLine("  • Project name doesn't exist or no access");
+                Console.WriteLine("  • Insufficient permissions (need Work Items Read & Write)");
+                Console.WriteLine("  • Network connectivity issues");
+                
                 return false;
             }
-
-            // Save to sync history
-            await SaveSyncHistoryAsync(result, spec.SpecificationPath);
-
-            Console.WriteLine();
-            Console.WriteLine("🎉 All connection tests passed!");
-            Console.WriteLine("✅ Ready to sync OpenAPI specifications to Azure DevOps");
-            
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Connection test failed: {ex.Message}");
-            Console.WriteLine();
-            Console.WriteLine("💡 Common issues:");
-            Console.WriteLine("  • Invalid Personal Access Token (PAT)");
-            Console.WriteLine("  • Incorrect Organization URL");
-            Console.WriteLine("  • Project name doesn't exist or no access");
-            Console.WriteLine("  • Insufficient permissions (need Work Items Read & Write)");
-            Console.WriteLine("  • Network connectivity issues");
-            
-            return false;
-        }
-    }
-
-    public async Task<List<WorkItemSyncResult>> GetSyncHistoryAsync()
-    {
-        var historyPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "sync-history.json");
-        
-        if (!File.Exists(historyPath))
-        {
-            return new List<WorkItemSyncResult>();
         }
 
-        try
+        public async Task<List<WorkItemSyncResult>> GetSyncHistoryAsync()
         {
-            var json = await File.ReadAllTextAsync(historyPath);
-            var history = JsonSerializer.Deserialize<List<SyncHistoryEntry>>(json) ?? new List<SyncHistoryEntry>();
+            var historyPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "sync-history.json");
             
-            return history.Select(h => new WorkItemSyncResult
+            if (!File.Exists(historyPath))
             {
+                return new List<WorkItemSyncResult>();
+            }
+
+            try
+            {
+                var json = await File.ReadAllTextAsync(historyPath);
+                var history = JsonSerializer.Deserialize<List<SyncHistoryEntry>>(json) ?? new List<SyncHistoryEntry>();
+                
+                return history.Select(h => new WorkItemSyncResult
+                {
+                    CreatedStories = h.CreatedStories,
+                    UpdatedStories = h.UpdatedStories,
+                    DeletedStories = h.DeletedStories,
+                    CreatedTestCases = h.CreatedTestCases,
+                    UpdatedTestCases = h.UpdatedTestCases,
+                    DeletedTestCases = h.DeletedTestCases,
+                    Errors = h.Errors,
+                    SyncedItems = h.SyncedItems
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Could not load sync history: {ex.Message}");
+                return new List<WorkItemSyncResult>();
+            }
+        }
+
+        private async Task SaveSyncHistoryAsync(WorkItemSyncResult result, string specificationPath)
+        {
+            var historyPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "sync-history.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(historyPath)!);
+
+            var history = await GetSyncHistoryAsync();
+            
+            var newEntry = new SyncHistoryEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                SpecificationPath = specificationPath,
+                CreatedStories = result.CreatedStories,
+                UpdatedStories = result.UpdatedStories,
+                DeletedStories = result.DeletedStories,
+                CreatedTestCases = result.CreatedTestCases,
+                UpdatedTestCases = result.UpdatedTestCases,
+                DeletedTestCases = result.DeletedTestCases,
+                Errors = result.Errors,
+                SyncedItems = result.SyncedItems
+            };
+
+            var historyEntries = history.Select(h => new SyncHistoryEntry
+            {
+                Timestamp = DateTime.UtcNow, // This should be preserved from original
+                SpecificationPath = specificationPath,
                 CreatedStories = h.CreatedStories,
                 UpdatedStories = h.UpdatedStories,
                 DeletedStories = h.DeletedStories,
@@ -605,156 +643,21 @@ namespace API.Core.Services.AzureDevOps
                 Errors = h.Errors,
                 SyncedItems = h.SyncedItems
             }).ToList();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"⚠️  Could not load sync history: {ex.Message}");
-            return new List<WorkItemSyncResult>();
-        }
-    }
 
-    private async Task SaveSyncHistoryAsync(WorkItemSyncResult result, string specificationPath)
-    {
-        var historyPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "sync-history.json");
-        Directory.CreateDirectory(Path.GetDirectoryName(historyPath)!);
-
-        var history = await GetSyncHistoryAsync();
-        
-        var newEntry = new SyncHistoryEntry
-        {
-            Timestamp = DateTime.UtcNow,
-            SpecificationPath = specificationPath,
-            CreatedStories = result.CreatedStories,
-            UpdatedStories = result.UpdatedStories,
-            DeletedStories = result.DeletedStories,
-            CreatedTestCases = result.CreatedTestCases,
-            UpdatedTestCases = result.UpdatedTestCases,
-            DeletedTestCases = result.DeletedTestCases,
-            Errors = result.Errors,
-            SyncedItems = result.SyncedItems
-        };
-
-        var historyEntries = history.Select(h => new SyncHistoryEntry
-        {
-            Timestamp = DateTime.UtcNow, // This should be preserved from original
-            SpecificationPath = specificationPath,
-            CreatedStories = h.CreatedStories,
-            UpdatedStories = h.UpdatedStories,
-            DeletedStories = h.DeletedStories,
-            CreatedTestCases = h.CreatedTestCases,
-            UpdatedTestCases = h.UpdatedTestCases,
-            DeletedTestCases = h.DeletedTestCases,
-            Errors = h.Errors,
-            SyncedItems = h.SyncedItems
-        }).ToList();
-
-        historyEntries.Insert(0, newEntry); // Add newest first
-        
-        // Keep only last 50 entries
-        if (historyEntries.Count > 50)
-        {
-            historyEntries = historyEntries.Take(50).ToList();
-        }
-
-        var json = JsonSerializer.Serialize(historyEntries, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(historyPath, json);
-    }
-
-    private class SyncHistoryEntry
-    {
-        public DateTime Timestamp { get; set; }
-        public string SpecificationPath { get; set; } = string.Empty;
-        public int CreatedStories { get; set; }
-        public int UpdatedStories { get; set; }
-        public int DeletedStories { get; set; }
-        public int CreatedTestCases { get; set; }
-        public int UpdatedTestCases { get; set; }
-        public int DeletedTestCases { get; set; }
-        public List<string> Errors { get; set; } = new();
-        public List<SyncedWorkItem> SyncedItems { get; set; } = new();
-    }
-
-    public async Task<List<WorkItemSyncResult>> GetSyncHistoryAsync()
-    {
-        var historyPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "sync-history.json");
-        
-        if (!File.Exists(historyPath))
-        {
-            return new List<WorkItemSyncResult>();
-        }
-
-        try
-        {
-            var json = await File.ReadAllTextAsync(historyPath);
-            var history = JsonSerializer.Deserialize<List<SyncHistoryEntry>>(json) ?? new List<SyncHistoryEntry>();
+            historyEntries.Insert(0, newEntry); // Add newest first
             
-            return history.Select(h => new WorkItemSyncResult
+            // Keep only last 50 entries
+            if (historyEntries.Count > 50)
             {
-                CreatedStories = h.CreatedStories,
-                UpdatedStories = h.UpdatedStories,
-                DeletedStories = h.DeletedStories,
-                CreatedTestCases = h.CreatedTestCases,
-                UpdatedTestCases = h.UpdatedTestCases,
-                DeletedTestCases = h.DeletedTestCases,
-                Errors = h.Errors,
-                SyncedItems = h.SyncedItems
-            }).ToList();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"⚠️  Could not load sync history: {ex.Message}");
-            return new List<WorkItemSyncResult>();
+                historyEntries = historyEntries.Take(50).ToList();
+            }
+
+            var json = JsonSerializer.Serialize(historyEntries, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(historyPath, json);
         }
     }
 
-    private async Task SaveSyncHistoryAsync(WorkItemSyncResult result, string specificationPath)
-    {
-        var historyPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "sync-history.json");
-        Directory.CreateDirectory(Path.GetDirectoryName(historyPath)!);
-
-        var history = await GetSyncHistoryAsync();
-        
-        var newEntry = new SyncHistoryEntry
-        {
-            Timestamp = DateTime.UtcNow,
-            SpecificationPath = specificationPath,
-            CreatedStories = result.CreatedStories,
-            UpdatedStories = result.UpdatedStories,
-            DeletedStories = result.DeletedStories,
-            CreatedTestCases = result.CreatedTestCases,
-            UpdatedTestCases = result.UpdatedTestCases,
-            DeletedTestCases = result.DeletedTestCases,
-            Errors = result.Errors,
-            SyncedItems = result.SyncedItems
-        };
-
-        var historyEntries = history.Select(h => new SyncHistoryEntry
-        {
-            Timestamp = DateTime.UtcNow, // This should be preserved from original
-            SpecificationPath = specificationPath,
-            CreatedStories = h.CreatedStories,
-            UpdatedStories = h.UpdatedStories,
-            DeletedStories = h.DeletedStories,
-            CreatedTestCases = h.CreatedTestCases,
-            UpdatedTestCases = h.UpdatedTestCases,
-            DeletedTestCases = h.DeletedTestCases,
-            Errors = h.Errors,
-            SyncedItems = h.SyncedItems
-        }).ToList();
-
-        historyEntries.Insert(0, newEntry); // Add newest first
-        
-        // Keep only last 50 entries
-        if (historyEntries.Count > 50)
-        {
-            historyEntries = historyEntries.Take(50).ToList();
-        }
-
-        var json = JsonSerializer.Serialize(historyEntries, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(historyPath, json);
-    }
-
-    private class SyncHistoryEntry
+    public class SyncHistoryEntry
     {
         public DateTime Timestamp { get; set; }
         public string SpecificationPath { get; set; } = string.Empty;
