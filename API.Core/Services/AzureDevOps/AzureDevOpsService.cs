@@ -21,17 +21,7 @@ namespace API.Core.Services.AzureDevOps
 
         public AzureDevOpsService()
         {
-            // Try multiple possible paths for the config file
-            var possiblePaths = new[]
-            {
-                Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "devops-config.json"),
-                Path.Combine(Directory.GetCurrentDirectory(), "Config", "AzureDevOps", "devops-config.json"),
-                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "API.TestBase", "Config", "AzureDevOps", "devops-config.json"),
-                Path.Combine(Directory.GetCurrentDirectory(), "API.TestBase", "Config", "AzureDevOps", "devops-config.json")
-            };
-            
-            _configPath = possiblePaths.FirstOrDefault(File.Exists) ?? possiblePaths[0];
-            
+            _configPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "devops-config.json");
             _config = LoadConfiguration();
             
             _connection = new VssConnection(new Uri(_config.OrganizationUrl), new VssBasicCredential(string.Empty, _config.PersonalAccessToken));
@@ -418,55 +408,24 @@ namespace API.Core.Services.AzureDevOps
 
         private AzureDevOpsConfig LoadConfiguration()
         {
-            Console.WriteLine($"🔍 Looking for config at: {_configPath}");
-            
             if (!File.Exists(_configPath))
             {
-                Console.WriteLine("❌ Config file not found, creating default...");
                 CreateDefaultConfiguration();
             }
-            else
-            {
-                Console.WriteLine("✅ Config file found!");
-            }
 
-            try
-            {
-                var json = File.ReadAllText(_configPath);
-                Console.WriteLine($"📄 Config content preview: {json.Substring(0, Math.Min(100, json.Length))}...");
-                
-                var config = JsonSerializer.Deserialize<AzureDevOpsConfig>(json, new JsonSerializerOptions 
-                { 
-                    PropertyNameCaseInsensitive = true 
-                });
-                
-                if (config != null)
-                {
-                    Console.WriteLine($"✅ Config loaded - Org: {config.OrganizationUrl}, Project: {config.ProjectName}");
-                    return config;
-                }
-                else
-                {
-                    Console.WriteLine("❌ Config deserialization returned null");
-                    return new AzureDevOpsConfig();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error loading config: {ex.Message}");
-                return new AzureDevOpsConfig();
-            }
+            var json = File.ReadAllText(_configPath);
+            return JsonSerializer.Deserialize<AzureDevOpsConfig>(json) ?? new AzureDevOpsConfig();
         }
 
         private void CreateDefaultConfiguration()
         {
             var defaultConfig = new AzureDevOpsConfig
             {
-                OrganizationUrl = "https://dev.azure.com/tr-legal-3E",
-                ProjectName = "3EProject",
+                OrganizationUrl = "https://dev.azure.com/YourOrganization",
+                ProjectName = "YourProject",
                 PersonalAccessToken = "YOUR_PAT_TOKEN_HERE",
-                AreaPath = "3EProject\\API Tests",
-                IterationPath = "3EProject",
+                AreaPath = "YourProject\\API Tests",
+                IterationPath = "YourProject",
                 StoryTemplate = new WorkItemTemplate
                 {
                     WorkItemType = "User Story",
