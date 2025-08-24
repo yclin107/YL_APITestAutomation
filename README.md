@@ -1,4 +1,4 @@
-# APITestAutomation
+# API Test Automation Framework
 
 ## OpenAPI Test Generator
 
@@ -22,7 +22,7 @@ This framework now includes an automatic test generator based on OpenAPI (Swagge
 
 #### Interactive Menu
 ```bash
-dotnet run --project APITestAutomation
+dotnet run --project API.Core
 ```
 
 #### Direct Commands
@@ -30,19 +30,19 @@ dotnet run --project APITestAutomation
 #### 1. Generate tests from OpenAPI specification
 
 ```bash
-dotnet run --project APITestAutomation generate swagger.json
+dotnet run --project API.Core generate swagger.json
 ```
 
 #### 2. Detect changes in specification
 
 ```bash
-dotnet run --project APITestAutomation detect swagger.json
+dotnet run --project API.Core detect swagger.json
 ```
 
 #### 3. Preview tests that would be generated
 
 ```bash
-dotnet run --project APITestAutomation preview swagger.json
+dotnet run --project API.Core preview swagger.json
 ```
 
 ### Workflow
@@ -54,23 +54,23 @@ dotnet run --project APITestAutomation preview swagger.json
 
 ### Generated file structure
 
-- `APITestAutomationTest/Generated/` - Auto-generated tests
-- `APITestAutomation/Config/OpenAPI/` - Saved configurations and specifications
-- `APITestAutomation/Reports/` - Change reports
-- `APITestAutomation/Specifications/` - OpenAPI specification files
-- `APITestAutomation/Profiles/` - Encrypted tenant profiles (gitignored)
+- `API.TestBase/Generated/` - Auto-generated tests
+- `API.Core/Config/OpenAPI/` - Saved configurations and specifications
+- `API.Core/Reports/` - Change reports
+- `API.Core/Specifications/` - OpenAPI specification files
+- `API.TestBase/Profiles/` - Encrypted tenant profiles (gitignored)
 
 ### BDD Support
 
 The framework includes BDD support with reusable step definitions:
 
-- `APITestAutomationTest/StepDefinitions/` - Reusable step definitions
-- `APITestAutomationTest/Features/` - BDD feature files
+- `API.TestBase/Tests/StepDefinitions/` - Reusable step definitions
+- `API.TestBase/Tests/Features/` - BDD feature files
 - Easy workflow composition using multiple endpoints
 
 ### Example OpenAPI specification
 
-You can find an example in `APITestAutomation/Specifications/sample-openapi.json`
+You can find an example in `API.Core/Specifications/sample-openapi.json`
 
 ### Auto-generated tests
 
@@ -120,7 +120,7 @@ The framework uses encrypted JSON profiles to manage tenant configurations and u
 
 #### Profile Organization
 ```
-APITestAutomationTest/Profiles/
+API.TestBase/Profiles/
 └── 3E-Proforma/           # Team name
     ├── dev/               # Environment
     │   └── tenant1.json   # Tenant profile
@@ -131,11 +131,11 @@ APITestAutomationTest/Profiles/
 #### Running Tests
 ```bash
 # With encrypted profiles (auto-decrypts before running)
-$env:MASTER_PASSWORD="admin"; $env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test
+$env:MASTER_PASSWORD="admin"; $env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test --project API.TestBase
 
 # With decrypted profiles
-$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test
+$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test --project API.TestBase
 
 # Parallel execution with 4 threads
-$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test --parallel 4
+$env:TEST_PROFILE="3E-Proforma/dev/ptpd68r3nke7q5pnutzaaw"; dotnet test --project API.TestBase --parallel 4
 ```

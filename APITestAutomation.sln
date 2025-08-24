@@ -1,13 +1,10 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APITestAutomationTest", "APITestAutomationTest\APITestAutomationTest.csproj", "{E9375B99-EFC1-4142-ACF4-8FDBF01AD7D6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.TestBase", "API.TestBase\API.TestBase.csproj", "{E9375B99-EFC1-4142-ACF4-8FDBF01AD7D6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APITestAutomationServices", "APITestAutomationServices\APITestAutomationServices.csproj", "{97E3D27E-5462-419B-BF56-F3D4E91CBCB5}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APITestAutomation", "APITestAutomation\APITestAutomation.csproj", "{42603C17-B6B9-4731-8669-A2DBB9A64193}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.Core", "API.Core\API.Core.csproj", "{42603C17-B6B9-4731-8669-A2DBB9A64193}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,10 +16,6 @@ Global
 		{E9375B99-EFC1-4142-ACF4-8FDBF01AD7D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E9375B99-EFC1-4142-ACF4-8FDBF01AD7D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E9375B99-EFC1-4142-ACF4-8FDBF01AD7D6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{97E3D27E-5462-419B-BF56-F3D4E91CBCB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{97E3D27E-5462-419B-BF56-F3D4E91CBCB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{97E3D27E-5462-419B-BF56-F3D4E91CBCB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{97E3D27E-5462-419B-BF56-F3D4E91CBCB5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{42603C17-B6B9-4731-8669-A2DBB9A64193}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{42603C17-B6B9-4731-8669-A2DBB9A64193}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{42603C17-B6B9-4731-8669-A2DBB9A64193}.Release|Any CPU.ActiveCfg = Release|Any CPU

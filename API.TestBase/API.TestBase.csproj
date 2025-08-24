@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<Content Include="allureConfig.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+	<EnableDefaultItems>true</EnableDefaultItems>
+	<EnableLongPaths>true</EnableLongPaths>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Allure.NUnit" Version="2.12.1" />
+	<PackageReference Include="Allure.Net.Commons" Version="2.12.1" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="3.9.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+	<PackageReference Include="RestAssured.Net" Version="4.7.0" />
+	<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\API.Core\API.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+</Project>
