@@ -1,4 +1,4 @@
-﻿namespace APITestAutomation.Models.PPSProformaModels.Entities.Timekeepers
+﻿namespace API.TestBase.Models.PPSProformaModels.Entities.Timekeepers
 {
     public class TimekeeperWithNameOnly
     {

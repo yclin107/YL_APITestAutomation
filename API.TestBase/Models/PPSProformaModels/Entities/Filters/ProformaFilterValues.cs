@@ -1,7 +1,7 @@
 ﻿
-using APITestAutomation.Models.PPSProformaModels.Entities.Users;
+using API.TestBase.Models.PPSProformaModels.Entities.Users;
 
-namespace APITestAutomation.Models.PPSProformaModels.Entities.Filters;
+namespace API.TestBase.Models.PPSProformaModels.Entities.Filters;
 
 public class ProformaFilterValues
 {

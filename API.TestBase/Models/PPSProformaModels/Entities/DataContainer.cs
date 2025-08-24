@@ -1,5 +1,5 @@
 ﻿
-namespace APITestAutomation.Models.PPSProformaModels.Entities;
+namespace API.TestBase.Models.PPSProformaModels.Entities;
 
 public class DataContainer<T> where T : class
 {

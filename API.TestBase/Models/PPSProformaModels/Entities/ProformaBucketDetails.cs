@@ -1,8 +1,8 @@
 ﻿
-using APITestAutomation.Models.PPSProformaModels.Entities.Filters;
-using APITestAutomation.Models.PPSProformaModels.Entities.Proformas;
+using API.TestBase.Models.PPSProformaModels.Entities.Filters;
+using API.TestBase.Models.PPSProformaModels.Entities.Proformas;
 
-namespace APITestAutomation.Models.PPSProformaModels.Entities;
+namespace API.TestBase.Models.PPSProformaModels.Entities;
 
 public class ProformaBucketDetails
 {

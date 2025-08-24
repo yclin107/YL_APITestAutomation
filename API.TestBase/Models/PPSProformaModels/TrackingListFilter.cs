@@ -1,6 +1,6 @@
 ﻿
 
-namespace APITestAutomation.Models.ProformaModels
+namespace API.TestBase.Models.ProformaModels
 {
     public class TrackingListFilter
     {

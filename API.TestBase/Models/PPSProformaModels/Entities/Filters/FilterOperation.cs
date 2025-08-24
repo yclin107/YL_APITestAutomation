@@ -1,5 +1,5 @@
 ﻿
-namespace APITestAutomation.Models.PPSProformaModels.Entities.Filters;
+namespace API.TestBase.Models.PPSProformaModels.Entities.Filters;
 
 public class FilterOperation<T>
 {

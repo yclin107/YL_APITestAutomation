@@ -1,4 +1,4 @@
-﻿namespace APITestAutomation.Models.PPSProformaModels.Entities.Proformas;
+﻿namespace API.TestBase.Models.PPSProformaModels.Entities.Proformas;
 public enum ProformaStatus
 {
     None = 0,

@@ -1,6 +1,6 @@
-﻿using APITestAutomation.Models.PPSProformaModels.Entities.Proformas;
+﻿using API.TestBase.Models.PPSProformaModels.Entities.Proformas;
 
-namespace APITestAutomation.Models.PPSProformaModels.Entities.Filters;
+namespace API.TestBase.Models.PPSProformaModels.Entities.Filters;
 
 public class ProformaFilter
 {

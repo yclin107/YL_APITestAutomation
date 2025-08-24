@@ -1,7 +1,7 @@
-﻿using APITestAutomation.Models.PPSProformaModels.Entities.Timekeepers;
-using APITestAutomation.Models.PPSProformaModels.Entities.Users;
+﻿using API.TestBase.Models.PPSProformaModels.Entities.Timekeepers;
+using API.TestBase.Models.PPSProformaModels.Entities.Users;
 
-namespace APITestAutomation.Models.PPSProformaModels.Entities.Proformas
+namespace API.TestBase.Models.PPSProformaModels.Entities.Proformas
 {
     public class ProformaListItem : ProformaWfIndex
     {

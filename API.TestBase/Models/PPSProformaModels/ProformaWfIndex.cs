@@ -1,7 +1,7 @@
 ﻿
-using APITestAutomation.Models.PPSProformaModels.Entities;
+using API.TestBase.Models.PPSProformaModels.Entities;
 
-namespace APITestAutomation.Models.PPSProformaModels
+namespace API.TestBase.Models.PPSProformaModels
 {
     public class ProformaWfIndex : EntityWithIdBase
     {

@@ -1,5 +1,5 @@
 ﻿
-namespace APITestAutomation.Models.PPSProformaModels.PPSProformaConstants;
+namespace API.TestBase.Models.PPSProformaModels.PPSProformaConstants;
 
 public enum ProformaBucket
 {

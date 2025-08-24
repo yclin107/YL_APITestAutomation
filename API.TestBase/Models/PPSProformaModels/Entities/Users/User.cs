@@ -1,4 +1,4 @@
-﻿namespace APITestAutomation.Models.PPSProformaModels.Entities.Users
+﻿namespace API.TestBase.Models.PPSProformaModels.Entities.Users
 {
     public class User : EntityWithIdBase
     {

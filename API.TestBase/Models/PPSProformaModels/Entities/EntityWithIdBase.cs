@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace APITestAutomation.Models.PPSProformaModels.Entities
+namespace API.TestBase.Models.PPSProformaModels.Entities
 {
     public abstract class EntityWithIdBase
     {

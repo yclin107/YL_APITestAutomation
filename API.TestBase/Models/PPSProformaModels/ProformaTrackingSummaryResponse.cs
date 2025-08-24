@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 
 
-namespace APITestAutomation.Models.ProformaModels
+namespace API.TestBase.Models.ProformaModels
 {
     public class ProformaTrackingSummaryResponse
     {

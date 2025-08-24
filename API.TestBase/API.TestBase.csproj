@@ -37,4 +37,8 @@
     <Using Include="NUnit.Framework" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Config\Profiles\Encrypted\" />
+  </ItemGroup>
+
 </Project>

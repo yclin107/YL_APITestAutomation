@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace APITestAutomation.Endpoints
+namespace API.TestBase.Endpoints
 {
     public static class PPSProformaEndpoints
     {
