@@ -272,14 +272,10 @@ namespace API.Core.Services.OpenAPI
         {
             try
             {
-                var manager = new OpenApiTestManager();
-                
                 // Check if schema is too complex (might cause memory issues)
                 var complexityScore = CalculateSchemaComplexity(openApiSchema);
                 if (complexityScore > 1000)
                 {
-                    // Track this endpoint as having memory issues
-                    Console.WriteLine($"⚠️  Schema too complex for {schemaKey}, using simplified version");
                     return CreateSimplifiedSchema(openApiSchema, schemaKey);
                 }
                 
@@ -392,17 +388,11 @@ namespace API.Core.Services.OpenAPI
                 
                 return JsonSerializer.Serialize(schema, new JsonSerializerOptions 
                 { 
-                    WriteIndented = true,
-                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                    WriteIndented = true 
                 });
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("Cannot allocate a buffer"))
-                {
-                    Console.WriteLine($"❌ Memory error processing schema for {schemaKey}: {ex.Message}");
-                    return CreateSimplifiedSchema(openApiSchema, $"{schemaKey} (Memory Error)");
-                }
                 return @"{
                     ""type"": ""object"",
                     ""additionalProperties"": true,
@@ -466,8 +456,10 @@ namespace API.Core.Services.OpenAPI
 
         private static string EscapeJsonForString(string json)
         {
-            // Don't escape newlines and tabs - keep the JSON readable
-            return json.Replace("\"", "\\\"");
+            return json.Replace("\\", "\\\\").Replace("\"", "\\\"")
+                      .Replace("\r", "")
+                      .Replace("\n", "\\n")
+                      .Replace("\t", "\\t");
         }
 
         private static void GenerateEndpointTestsWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec, string sanitizedTag, bool forceUnauthorizedTest = false)

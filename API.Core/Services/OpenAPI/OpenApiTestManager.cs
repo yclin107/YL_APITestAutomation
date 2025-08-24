@@ -2,7 +2,6 @@ using API.Core.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
-using System.Collections.Concurrent;
 
 namespace API.Core.Services.OpenAPI
 {
@@ -12,7 +11,6 @@ namespace API.Core.Services.OpenAPI
         private readonly string _testsPath;
         private readonly string _reportsPath;
         private readonly TestProtectionManager _protectionManager;
-        private readonly ConcurrentBag<string> _memoryErrorEndpoints = new();
 
         public OpenApiTestManager(string configPath = "Config/OpenAPI", string testsPath = "Generated", string reportsPath = "Reports")
         {
@@ -64,15 +62,7 @@ namespace API.Core.Services.OpenAPI
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("Cannot allocate a buffer"))
-                {
-                    Console.WriteLine($"❌ Memory allocation error while saving spec: {ex.Message}");
-                    _memoryErrorEndpoints.Add("SPEC_SERIALIZATION");
-                }
-                else
-                {
-                    Console.WriteLine($"⚠️  Could not save spec for comparison: {ex.Message}");
-                }
+                Console.WriteLine($"⚠️  Could not save spec for comparison (large file): {ex.Message}");
                 // Create a minimal file just with basic info
                 var basicInfo = new
                 {
@@ -214,21 +204,6 @@ namespace API.Core.Services.OpenAPI
             };
             var json = JsonSerializer.Serialize(specForSerialization, jsonOptions);
             await File.WriteAllTextAsync(configFile, json);
-            
-            // Report memory errors if any occurred
-            if (_memoryErrorEndpoints.Any())
-            {
-                Console.WriteLine();
-                Console.WriteLine("❌ MEMORY ALLOCATION ERRORS DETECTED:");
-                Console.WriteLine("The following endpoints had memory issues during processing:");
-                foreach (var endpoint in _memoryErrorEndpoints.Distinct())
-                {
-                    Console.WriteLine($"   • {endpoint}");
-                }
-                Console.WriteLine();
-                Console.WriteLine("💡 These endpoints will use simplified schema validation in generated tests.");
-                Console.WriteLine("   Consider manual validation for critical response fields.");
-            }
             
             return $"Tests generated successfully:\n" + string.Join("\n", generatedFiles.Select(f => $"- {f}"));
         }
