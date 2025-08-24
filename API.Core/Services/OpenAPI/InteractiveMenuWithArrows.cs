@@ -110,7 +110,7 @@ namespace API.Core.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("❌ No profiles found. Please create a profile first.");
-                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomationTest", "Profiles"))}");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "API.TestBase", "Config", "Profiles"))}");
                 PauseForUser();
                 return;
             }
@@ -293,7 +293,7 @@ namespace API.Core.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("No profiles found.");
-                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomationTest", "Profiles"))}");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "API.TestBase", "Config", "Profiles"))}");
             }
             else
             {
@@ -567,6 +567,14 @@ namespace API.Core.Services.OpenAPI
             var currentDir = AppContext.BaseDirectory;
             var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
             return Path.GetFullPath(solutionRoot);
+        }
+
+        private string GetProfilesPath()
+        {
+            var currentDir = AppContext.BaseDirectory;
+            var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
+            var profilesPath = Path.Combine(projectRoot, "API.TestBase", "Config", "Profiles");
+            return Path.GetFullPath(profilesPath);
         }
 
         private string GetSpecificationPath()
