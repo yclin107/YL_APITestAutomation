@@ -7,13 +7,11 @@ namespace API.Core.Services.OpenAPI
     {
         private readonly OpenApiTestManager _manager;
         private readonly ProfileManager _profileManager;
-        private readonly API.Core.Services.AzureDevOps.AzureDevOpsService _azureDevOpsService;
 
         public InteractiveMenuWithArrows()
         {
             _manager = new OpenApiTestManager();
             _profileManager = new ProfileManager();
-            _azureDevOpsService = new API.Core.Services.AzureDevOps.AzureDevOpsService();
         }
 
         public async Task ShowMenuAsync()
@@ -474,6 +472,235 @@ pause > nul";
             }
 
             PauseForUser();
+        }
+
+        private async Task HandleAzureDevOpsIntegration()
+        {
+            var options = new[]
+            {
+                "🔄 Sync OpenAPI Spec to Azure DevOps",
+                "⚙️ Configure Azure DevOps Settings",
+                "📋 View Sync History",
+                "🧪 Test Azure DevOps Connection"
+            };
+
+            while (true)
+            {
+                var choice = ShowMenuWithArrows("Azure DevOps Integration", options);
+
+                if (choice == -1) // Esc pressed
+                    return;
+
+                switch (choice)
+                {
+                    case 0:
+                        await HandleSyncToAzureDevOps();
+                        break;
+                    case 1:
+                        await HandleConfigureAzureDevOps();
+                        break;
+                    case 2:
+                        await HandleViewSyncHistory();
+                        break;
+                    case 3:
+                        await HandleTestAzureDevOpsConnection();
+                        break;
+                }
+            }
+        }
+
+        private async Task HandleSyncToAzureDevOps()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Sync to Azure DevOps ===");
+            Console.WriteLine();
+
+            var specPath = GetSpecificationPath();
+            if (string.IsNullOrEmpty(specPath)) return;
+
+            try
+            {
+                Console.WriteLine("📖 Loading OpenAPI specification...");
+                var spec = await _manager.LoadSpecificationAsync(specPath);
+
+                Console.WriteLine($"🔍 Found {spec.EndpointTests.Count} endpoints to sync");
+                Console.WriteLine($"📋 API: {spec.Document.Info?.Title ?? "Unknown"}");
+                Console.WriteLine($"📌 Version: {spec.Document.Info?.Version ?? "Unknown"}");
+                Console.WriteLine();
+
+                Console.Write("Do you want to proceed with the sync? (y/n): ");
+                var response = Console.ReadLine()?.ToLower();
+
+                if (response != "y" && response != "yes")
+                {
+                    Console.WriteLine("❌ Sync cancelled.");
+                    PauseForUser();
+                    return;
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("🚀 Starting Azure DevOps synchronization...");
+                
+                var result = await _azureDevOpsService.SyncOpenApiSpecAsync(spec);
+
+                Console.WriteLine();
+                Console.WriteLine("✅ Synchronization completed!");
+                Console.WriteLine();
+                Console.WriteLine("📊 RESULTS:");
+                Console.WriteLine($"   📖 Stories: {result.CreatedStories} created, {result.UpdatedStories} updated, {result.DeletedStories} deleted");
+                Console.WriteLine($"   🧪 Test Cases: {result.CreatedTestCases} created, {result.UpdatedTestCases} updated, {result.DeletedTestCases} deleted");
+                
+                if (result.SyncedItems.Any())
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("🔗 Synced Work Items:");
+                    foreach (var item in result.SyncedItems.Take(10)) // Show first 10
+                    {
+                        Console.WriteLine($"   {GetActionEmoji(item.Action)} {item.Type}: {item.Title} (ID: {item.Id})");
+                    }
+                    
+                    if (result.SyncedItems.Count > 10)
+                    {
+                        Console.WriteLine($"   ... and {result.SyncedItems.Count - 10} more items");
+                    }
+                }
+
+                if (result.Errors.Any())
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("❌ Errors:");
+                    foreach (var error in result.Errors)
+                    {
+                        Console.WriteLine($"   • {error}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Sync failed: {ex.Message}");
+            }
+
+            PauseForUser();
+        }
+
+        private async Task HandleConfigureAzureDevOps()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Configure Azure DevOps Settings ===");
+            Console.WriteLine();
+            
+            var configPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "devops-config.json");
+            
+            Console.WriteLine($"📁 Configuration file: {configPath}");
+            Console.WriteLine();
+            
+            if (File.Exists(configPath))
+            {
+                Console.WriteLine("✅ Configuration file exists");
+                Console.WriteLine("📝 You can edit the configuration manually or recreate it");
+                Console.WriteLine();
+                Console.WriteLine("Required settings:");
+                Console.WriteLine("  • Organization URL (e.g., https://dev.azure.com/YourOrg)");
+                Console.WriteLine("  • Project Name");
+                Console.WriteLine("  • Personal Access Token (PAT)");
+                Console.WriteLine("  • Area Path");
+                Console.WriteLine("  • Iteration Path");
+                Console.WriteLine();
+                
+                var options = new[] { "📝 Open config file location", "🔄 Recreate default config" };
+                var choice = ShowMenuWithArrows("Configuration Options", options);
+                
+                if (choice == 0)
+                {
+                    try
+                    {
+                        var process = new System.Diagnostics.Process
+                        {
+                            StartInfo = new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = "explorer",
+                                Arguments = Path.GetDirectoryName(configPath),
+                                UseShellExecute = true
+                            }
+                        };
+                        process.Start();
+                        Console.WriteLine("📂 Opened configuration folder");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ Could not open folder: {ex.Message}");
+                    }
+                }
+                else if (choice == 1)
+                {
+                    File.Delete(configPath);
+                    // This will recreate the default config
+                    var _ = new API.Core.Services.AzureDevOps.AzureDevOpsService();
+                    Console.WriteLine("✅ Default configuration recreated");
+                }
+            }
+            else
+            {
+                Console.WriteLine("❌ Configuration file not found");
+                Console.WriteLine("Creating default configuration...");
+                
+                // This will create the default config
+                var _ = new API.Core.Services.AzureDevOps.AzureDevOpsService();
+                Console.WriteLine("✅ Default configuration created");
+            }
+
+            PauseForUser();
+        }
+
+        private async Task HandleViewSyncHistory()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Sync History ===");
+            Console.WriteLine();
+            Console.WriteLine("📋 This feature will show previous synchronization results");
+            Console.WriteLine("🚧 Coming soon in future version");
+            PauseForUser();
+        }
+
+        private async Task HandleTestAzureDevOpsConnection()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Test Azure DevOps Connection ===");
+            Console.WriteLine();
+            
+            try
+            {
+                Console.WriteLine("🔌 Testing connection to Azure DevOps...");
+                
+                // This will test the connection by trying to create the service
+                var service = new API.Core.Services.AzureDevOps.AzureDevOpsService();
+                
+                Console.WriteLine("✅ Connection test completed");
+                Console.WriteLine("📝 Check the configuration if you encounter issues during sync");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Connection test failed: {ex.Message}");
+                Console.WriteLine();
+                Console.WriteLine("💡 Common issues:");
+                Console.WriteLine("  • Invalid Personal Access Token (PAT)");
+                Console.WriteLine("  • Incorrect Organization URL");
+                Console.WriteLine("  • Network connectivity issues");
+                Console.WriteLine("  • Missing permissions on Azure DevOps project");
+            }
+
+            PauseForUser();
+        }
+
+        private string GetActionEmoji(string action)
+        {
+            return action switch
+            {
+                "Created" => "✅",
+                "Updated" => "📝",
+                "Deleted" => "🗑️",
+                _ => "📋"
+            };
         }
 
         // Copy all the other methods from InteractiveMenu.cs
