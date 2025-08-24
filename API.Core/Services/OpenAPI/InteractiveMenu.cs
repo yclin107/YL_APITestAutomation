@@ -117,7 +117,8 @@ namespace API.Core.Services.OpenAPI
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "dotnet",
-                        Arguments = $"test --logger:allure --parallel {threads}" + 
+                        Arguments = $"test --logger \"allure;LogLevel=trace\"" + 
+                                   (threads > 1 ? $" --maxcpucount:{threads}" : "") +
                                    (string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\""),
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
