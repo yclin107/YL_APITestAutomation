@@ -78,7 +78,7 @@ namespace API.Core.Services.OpenAPI
         private static void GeneratePositiveTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
-            sb.AppendLine("        [Category(\"Generated\")]");
+            sb.AppendLine($"        [Category(\"{tag}\")]");
             sb.AppendLine($"        public void {tag}_API_{methodName}_PositiveTest()");
             sb.AppendLine("        {");
             sb.AppendLine($"            var context = GetTestContext();");
@@ -188,7 +188,7 @@ namespace API.Core.Services.OpenAPI
         private static void GenerateUnauthorizedTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
-            sb.AppendLine("        [Category(\"Generated\")]");
+            sb.AppendLine($"        [Category(\"{tag}\")]");
             sb.AppendLine($"        public void {tag}_API_{methodName}_UnauthorizedTest()");
             sb.AppendLine("        {");
             sb.AppendLine($"            var context = GetTestContext();");
@@ -234,7 +234,7 @@ namespace API.Core.Services.OpenAPI
         private static void GenerateMissingRequiredParametersTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
-            sb.AppendLine("        [Category(\"Generated\")]");
+            sb.AppendLine($"        [Category(\"{tag}\")]");
             sb.AppendLine($"        public void {tag}_API_{methodName}_MissingRequiredParametersTest()");
             sb.AppendLine("        {");
             sb.AppendLine($"            var context = GetTestContext();");
@@ -284,7 +284,7 @@ namespace API.Core.Services.OpenAPI
         private static void GenerateSchemaValidationTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
-            sb.AppendLine("        [Category(\"Generated\")]");
+            sb.AppendLine($"        [Category(\"{tag}\")]");
             sb.AppendLine($"        public void {tag}_API_{methodName}_SchemaValidationTest()");
             sb.AppendLine("        {");
             sb.AppendLine($"            var context = GetTestContext();");

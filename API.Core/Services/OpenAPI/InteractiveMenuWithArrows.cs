@@ -129,18 +129,17 @@ namespace API.Core.Services.OpenAPI
             Console.Write("Enter test filter (optional, e.g., Category=Generated): ");
             var filter = Console.ReadLine()?.Trim();
 
-            // Clean allure-results before running tests
-            var allureResultsPath = Path.Combine(GetSolutionRoot(), "allure-results");
-            if (Directory.Exists(allureResultsPath))
-            {
-                Console.WriteLine("🧹 Cleaning previous test results...");
-                Directory.Delete(allureResultsPath, true);
-                Directory.CreateDirectory(allureResultsPath);
-            }
-
             try
             {
-                var arguments = $"test --logger \"allure;LogLevel=trace\"";
+                // Clean allure-results before running tests
+                var allureResultsPath = Path.Combine(GetSolutionRoot(), "allure-results");
+                if (Directory.Exists(allureResultsPath))
+                {
+                    Directory.Delete(allureResultsPath, true);
+                    Directory.CreateDirectory(allureResultsPath);
+                }
+
+                var arguments = $"test --project \"{GetTestProjectPath()}\" --logger \"allure;LogLevel=trace\"";
                 
                 if (threads > 1)
                 {
@@ -152,58 +151,36 @@ namespace API.Core.Services.OpenAPI
                     arguments += $" --filter \"{filter}\"";
                 }
 
-                var process = new Process
+                // Create batch file for the command
+                var batchContent = $@"@echo off
+cd /d ""{GetSolutionRoot()}""
+set TEST_PROFILE={selectedProfile}
+echo 🚀 Running tests with profile: {selectedProfile}
+{(threads > 1 ? $"echo ⚡ Parallel threads: {threads}" : "")}
+echo 📊 Results will be saved to: {allureResultsPath}
+echo.
+dotnet {arguments}
+echo.
+echo ✅ Tests completed! Press any key to close...
+pause > nul";
+
+                var batchPath = Path.Combine(Path.GetTempPath(), "run_tests.bat");
+                await File.WriteAllTextAsync(batchPath, batchContent);
+
+                var process = new Process()
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "dotnet",
-                        Arguments = arguments,
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        WorkingDirectory = GetTestProjectPath()
+                        FileName = "cmd",
+                        Arguments = $"/c start \"API Tests\" cmd /k \"{batchPath}\"",
+                        UseShellExecute = true,
+                        CreateNoWindow = false
                     }
                 };
 
-                process.StartInfo.Environment["TEST_PROFILE"] = selectedProfile;
-                
-                Console.WriteLine($"🚀 Running tests with profile: {selectedProfile}");
-                if (threads > 1) Console.WriteLine($"⚡ Parallel threads: {threads}");
-                Console.WriteLine($"📊 Results will be saved to: {allureResultsPath}");
-                Console.WriteLine();
-
                 process.Start();
-                
-                // Show real-time output
-                var outputTask = Task.Run(async () =>
-                {
-                    string? line;
-                    while ((line = await process.StandardOutput.ReadLineAsync()) != null)
-                    {
-                        Console.WriteLine(line);
-                    }
-                });
-
-                var errorTask = Task.Run(async () =>
-                {
-                    string? line;
-                    while ((line = await process.StandardError.ReadLineAsync()) != null)
-                    {
-                        Console.WriteLine($"ERROR: {line}");
-                    }
-                });
-
-                await process.WaitForExitAsync();
-                await Task.WhenAll(outputTask, errorTask);
-
-                Console.WriteLine($"✅ Tests completed with exit code: {process.ExitCode}");
-                
-                // Show results summary
-                if (Directory.Exists(allureResultsPath))
-                {
-                    var resultFiles = Directory.GetFiles(allureResultsPath, "*-result.json");
-                    Console.WriteLine($"📊 Generated {resultFiles.Length} test result files");
-                }
+                Console.WriteLine("🚀 Opening tests in new terminal window...");
+                Console.WriteLine("The tests will run in a separate window.");
             }
             catch (Exception ex)
             {
