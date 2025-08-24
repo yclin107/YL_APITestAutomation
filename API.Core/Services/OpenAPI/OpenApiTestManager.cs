@@ -141,14 +141,14 @@ namespace API.Core.Services.OpenAPI
                     
                     if (isModified)
                     {
-                        var shouldOverwrite = await _protectionManager.ShouldOverwriteModifiedTestAsync(filePath);
+                        var shouldOverwrite = _protectionManager.ShouldOverwriteModifiedTest(filePath);
                         if (!shouldOverwrite)
                         {
                             Console.WriteLine($"⏭️  Skipping {fileName} (manually modified)");
                             continue;
                         }
                         
-                        await _protectionManager.CreateBackupAsync(filePath);
+                        _protectionManager.CreateBackup(filePath);
                     }
                 }
                 

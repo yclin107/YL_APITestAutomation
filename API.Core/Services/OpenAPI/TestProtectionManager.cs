@@ -33,7 +33,7 @@ namespace API.Core.Services.OpenAPI
             return currentHash != storedData.OriginalHash;
         }
 
-        public async Task<bool> ShouldOverwriteModifiedTestAsync(string filePath)
+        public bool ShouldOverwriteModifiedTest(string filePath)
         {
             Console.WriteLine($"⚠️  The file '{Path.GetFileName(filePath)}' has been manually modified.");
             Console.WriteLine("Your custom changes will be lost if you continue.");
@@ -70,7 +70,7 @@ namespace API.Core.Services.OpenAPI
             await SaveProtectionDataAsync(protection);
         }
 
-        public async Task CreateBackupAsync(string filePath)
+        public void CreateBackup(string filePath)
         {
             if (!File.Exists(filePath)) return;
 

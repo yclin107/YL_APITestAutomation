@@ -70,13 +70,13 @@ namespace API.Core.Helpers
             await File.WriteAllTextAsync(filePath, content);
         }
 
-        public async Task EncryptProfileAsync(string team, string environment, string tenantId, string masterPassword)
+        public void EncryptProfile(string team, string environment, string tenantId, string masterPassword)
         {
             var filePath = Path.Combine(_profilesPath, team, environment, $"{tenantId}.json");
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"Profile file not found: {filePath}");
 
-            var currentContent = await File.ReadAllTextAsync(filePath);
+            var currentContent = File.ReadAllText(filePath);
             
             // If already encrypted, skip
             if (IsEncrypted(currentContent))
@@ -87,7 +87,7 @@ namespace API.Core.Helpers
 
             // Encrypt the current content exactly as it is
             var encryptedContent = EncryptContent(currentContent, masterPassword);
-            await File.WriteAllTextAsync(filePath, encryptedContent);
+            File.WriteAllText(filePath, encryptedContent);
         }
 
         public async Task DecryptProfileAsync(string team, string environment, string tenantId, string masterPassword)
@@ -177,7 +177,7 @@ namespace API.Core.Helpers
                         var tenantId = Path.GetFileNameWithoutExtension(file);
                         try
                         {
-                            await EncryptProfileAsync(teamName, envName, tenantId, masterPassword);
+                            EncryptProfile(teamName, envName, tenantId, masterPassword);
                             Console.WriteLine($"✅ Encrypted profile: {teamName}/{envName}/{tenantId}");
                         }
                         catch (Exception ex)
@@ -205,7 +205,7 @@ namespace API.Core.Helpers
                         var tenantId = Path.GetFileNameWithoutExtension(file);
                         try
                         {
-                            await DecryptProfileAsync(teamName, envName, tenantId, masterPassword);
+                            DecryptProfile(teamName, envName, tenantId, masterPassword);
                             Console.WriteLine($"✅ Decrypted profile: {teamName}/{envName}/{tenantId}");
                         }
                         catch (Exception ex)

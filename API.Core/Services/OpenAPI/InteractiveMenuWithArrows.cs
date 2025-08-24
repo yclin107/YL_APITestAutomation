@@ -132,7 +132,7 @@ namespace API.Core.Services.OpenAPI
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "dotnet",
-                        Arguments = $"test --logger:allure" + 
+                        Arguments = $"test --logger \"allure;LogLevel=trace\"" + 
                                    (threads > 1 ? $" --parallel {threads}" : "") +
                                    (string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\""),
                         UseShellExecute = false,
@@ -172,7 +172,7 @@ namespace API.Core.Services.OpenAPI
             PauseForUser();
         }
 
-        private async Task HandleGenerateReport()
+        private void HandleGenerateReport()
         {
             Console.Clear();
             Console.WriteLine("=== Generate Allure Report ===");
@@ -590,7 +590,7 @@ namespace API.Core.Services.OpenAPI
             }
 
             var fileNames = files.Select(Path.GetFileName).ToArray();
-            var selectedIndex = ShowMenuWithArrows("Select Specification File", fileNames);
+            var selectedIndex = ShowMenuWithArrows("Select Specification File", fileNames!);
             
             return files[selectedIndex];
         }

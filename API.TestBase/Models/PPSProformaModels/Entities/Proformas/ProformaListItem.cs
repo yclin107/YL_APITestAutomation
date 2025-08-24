@@ -1,4 +1,4 @@
-﻿using API.TestBase.Models.PPSProformaModels.Entities.Timekeepers;
+using API.TestBase.Models.PPSProformaModels.Entities.Timekeepers;
 using API.TestBase.Models.PPSProformaModels.Entities.Users;
 
 namespace API.TestBase.Models.PPSProformaModels.Entities.Proformas
@@ -7,13 +7,13 @@ namespace API.TestBase.Models.PPSProformaModels.Entities.Proformas
     {
         public int ProformaNumber { get; set; }
 
-        public string ClientNumber { get; set; }
+        public string ClientNumber { get; set; } = string.Empty;
 
-        public string Client { get; set; }
+        public string Client { get; set; } = string.Empty;
 
-        public string Matter { get; set; }
+        public string Matter { get; set; } = string.Empty;
 
-        public string MatterNumber { get; set; }
+        public string MatterNumber { get; set; } = string.Empty;
 
         public double Total { get; set; }
 
@@ -33,33 +33,33 @@ namespace API.TestBase.Models.PPSProformaModels.Entities.Proformas
 
         public ProformaSubstatus Substatus { get; set; }
 
-        public string InvoiceNumber { get; set; }
+        public string InvoiceNumber { get; set; } = string.Empty;
 
         public DateTime? InvoiceDate { get; set; }
 
-        public string CurrencyCode { get; set; }
+        public string CurrencyCode { get; set; } = string.Empty;
 
         public bool IsPriority { get; set; }
 
-        public User LockedBy { get; set; }
+        public User? LockedBy { get; set; }
 
-        public User LockedByAuthenticated { get; set; }
+        public User? LockedByAuthenticated { get; set; }
 
         public bool IsForwarded { get; set; }
 
         public bool IsCombiningGroupProforma { get; set; }
 
-        public IEnumerable<TimekeeperWithNameOnly> Forwarded { get; set; }
+        public IEnumerable<TimekeeperWithNameOnly> Forwarded { get; set; } = new List<TimekeeperWithNameOnly>();
 
-        public string BillGroup { get; set; }
+        public string BillGroup { get; set; } = string.Empty;
 
         public bool HasComments { get; set; }
 
         public int CommentsCount { get; set; }
 
-        public string BillingTimekeeperName { get; set; }
+        public string BillingTimekeeperName { get; set; } = string.Empty;
 
-        public string BillingTimekeeperNumber { get; set; }
+        public string BillingTimekeeperNumber { get; set; } = string.Empty;
 
         public Guid Piid { get; set; }
 
@@ -69,14 +69,14 @@ namespace API.TestBase.Models.PPSProformaModels.Entities.Proformas
 
         public int CompletedCollaboratorsCount { get; set; }
 
-        public string Owner { get; set; }
+        public string Owner { get; set; } = string.Empty;
 
-        public string CoOwner { get; set; }
+        public string CoOwner { get; set; } = string.Empty;
 
         public DateTime ProfDate { get; set; }
 
         public DateTime Timestamp { get; set; }
 
-        public IList<string> Approvers { get; set; }
+        public IList<string> Approvers { get; set; } = new List<string>();
     }
 }

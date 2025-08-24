@@ -1,6 +1,6 @@
-﻿namespace API.TestBase.Models.PPSProformaModels.Entities.Timekeepers
+namespace API.TestBase.Models.PPSProformaModels.Entities.Timekeepers
 {
-    public class TimekeeperWithNameOnly
+    public string TimekeeperName { get; set; } = string.Empty;
     {
         public string TimekeeperName { get; set; }
     }
