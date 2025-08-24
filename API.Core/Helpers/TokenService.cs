@@ -18,13 +18,13 @@ namespace API.Core.Helpers
                 return cachedToken;
             }
             
-            // Get config from profile instead of ConfigSetup
-            var profileManager = new API.TestBase.Services.ProfileManager();
+            // Get profile from environment
+            var profileManager = new ProfileManager();
             var profile = await GetProfileFromEnvironment(profileManager);
             if (profile == null)
                 throw new InvalidOperationException("No profile loaded");
 
-            var authority = $"https://login.microsoftonline.com/{config.TenantId}";
+            var authority = $"https://login.microsoftonline.com/{profile.TenantId}";
 
             var publicClientApp = PublicClientApplicationBuilder
                 .Create(profile.AppId)
@@ -53,8 +53,8 @@ namespace API.Core.Helpers
 
             JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings();
             
-            // Get config from profile instead of ConfigSetup
-            var profileManager = new API.TestBase.Services.ProfileManager();
+            // Get profile from environment
+            var profileManager = new ProfileManager();
             var profile = await GetProfileFromEnvironment(profileManager);
             if (profile == null)
                 throw new InvalidOperationException("No profile loaded");
@@ -77,7 +77,7 @@ namespace API.Core.Helpers
             return tokenResult ?? throw new Exception("No token received");
         }
         
-        private static async Task<TenantProfile?> GetProfileFromEnvironment(API.TestBase.Services.ProfileManager profileManager)
+        private static async Task<TenantProfile?> GetProfileFromEnvironment(ProfileManager profileManager)
         {
             var profilePath = Environment.GetEnvironmentVariable("TEST_PROFILE");
             var masterPassword = Environment.GetEnvironmentVariable("MASTER_PASSWORD");
@@ -102,23 +102,5 @@ namespace API.Core.Helpers
         public string Password { get; set; } = string.Empty;
         public string DefaultTimekeeperIndex { get; set; } = string.Empty;
         public string DefaultTimekeeperNumber { get; set; } = string.Empty;
-    }
-    
-    // TenantProfile class for TokenService
-    public class TenantProfile
-    {
-        public string Elite3EClientId { get; set; } = string.Empty;
-        public string PPSClientId { get; set; } = string.Empty;
-        public string Elite3EApiUrl { get; set; } = string.Empty;
-        public string ProformaApiUrl { get; set; } = string.Empty;
-        public string[] OAuthScope { get; set; } = Array.Empty<string>();
-        public string PPSScope { get; set; } = string.Empty;
-        public string TenantId { get; set; } = string.Empty;
-        public string RedirectUri { get; set; } = string.Empty;
-        public string AppId { get; set; } = string.Empty;
-        public string AuthorizationEndpoint { get; set; } = string.Empty;
-        public string TokenEndpoint { get; set; } = string.Empty;
-        public string ClientId { get; set; } = string.Empty;
-        public Dictionary<string, UserConfig> Users { get; set; } = new();
     }
 }

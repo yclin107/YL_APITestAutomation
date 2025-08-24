@@ -13,7 +13,7 @@ namespace API.Core.Helpers
             // Point to the test project's Profiles folder
             var currentDir = AppContext.BaseDirectory;
             var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            _profilesPath = Path.Combine(solutionRoot, "API.TestBase", "Config", "Profiles");
+            _profilesPath = Path.Combine(solutionRoot, "API.TestBase", "Profiles");
             _profilesPath = Path.GetFullPath(_profilesPath);
         }
 
@@ -34,11 +34,15 @@ namespace API.Core.Helpers
                 content = DecryptContent(content, masterPassword);
             }
 
+            // Parse as raw JSON to preserve exact structure
             var options = new JsonSerializerOptions 
             { 
                 PropertyNameCaseInsensitive = true,
-                WriteIndented = true
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
+            
             return JsonSerializer.Deserialize<TenantProfile>(content, options);
         }
 
@@ -47,7 +51,9 @@ namespace API.Core.Helpers
             var options = new JsonSerializerOptions 
             { 
                 WriteIndented = true,
-                PropertyNameCaseInsensitive = true
+                PropertyNameCaseInsensitive = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
             var content = JsonSerializer.Serialize(profile, options);
             
@@ -175,7 +181,7 @@ namespace API.Core.Helpers
         {
             try
             {
-                JsonSerializer.Deserialize<object>(content);
+                JsonDocument.Parse(content);
                 return false; // Valid JSON, not encrypted
             }
             catch
@@ -186,6 +192,16 @@ namespace API.Core.Helpers
 
         private string EncryptContent(string content, string password)
         {
+            // Validate that content is valid JSON before encrypting
+            try
+            {
+                JsonDocument.Parse(content);
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException($"Content is not valid JSON: {ex.Message}");
+            }
+
             using var aes = Aes.Create();
             var key = GenerateKey(password);
             aes.Key = key;
@@ -204,7 +220,15 @@ namespace API.Core.Helpers
 
         private string DecryptContent(string encryptedContent, string password)
         {
-            var encryptedBytes = Convert.FromBase64String(encryptedContent);
+            byte[] encryptedBytes;
+            try
+            {
+                encryptedBytes = Convert.FromBase64String(encryptedContent);
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException($"Invalid encrypted content format: {ex.Message}");
+            }
             
             using var aes = Aes.Create();
             var key = GenerateKey(password);
@@ -220,7 +244,19 @@ namespace API.Core.Helpers
             using var decryptor = aes.CreateDecryptor();
             var decryptedBytes = decryptor.TransformFinalBlock(encrypted, 0, encrypted.Length);
             
-            return Encoding.UTF8.GetString(decryptedBytes);
+            var decryptedContent = Encoding.UTF8.GetString(decryptedBytes);
+            
+            // Validate that decrypted content is valid JSON
+            try
+            {
+                JsonDocument.Parse(decryptedContent);
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException($"Decrypted content is not valid JSON: {ex.Message}");
+            }
+            
+            return decryptedContent;
         }
 
         private byte[] GenerateKey(string password)
