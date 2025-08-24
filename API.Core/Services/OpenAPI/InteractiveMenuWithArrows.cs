@@ -332,6 +332,7 @@ namespace API.Core.Services.OpenAPI
                 "🚀 Generate Tests from OpenAPI Specification",
                 "🔍 Detect Changes in Specification",
                 "👁️ Preview Tests (without generating)",
+                "🔬 Validate OpenAPI Schemas",
                 "📁 Show Available Specification Files"
             };
 
@@ -354,6 +355,9 @@ namespace API.Core.Services.OpenAPI
                         await HandlePreviewFlow();
                         break;
                     case 3:
+                        await HandleValidateOpenApiSchemas();
+                        break;
+                    case 4:
                         ShowSpecificationFiles();
                         break;
                 }
@@ -732,6 +736,162 @@ namespace API.Core.Services.OpenAPI
             }
 
             PauseForUser();
+        }
+
+        private async Task HandleValidateOpenApiSchemas()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Validate OpenAPI Schemas ===");
+            Console.WriteLine();
+
+            var specPath = GetSpecificationPath();
+            if (string.IsNullOrEmpty(specPath)) return;
+
+            try
+            {
+                Console.WriteLine("📖 Loading OpenAPI specification...");
+                var spec = await _manager.LoadSpecificationAsync(specPath);
+
+                Console.WriteLine($"📋 API: {spec.Document.Info?.Title ?? "Unknown"}");
+                Console.WriteLine($"📌 Version: {spec.Document.Info?.Version ?? "Unknown"}");
+                Console.WriteLine($"🌐 Base URL: {spec.BaseUrl}");
+                Console.WriteLine();
+
+                Console.WriteLine("🔍 SCHEMA VALIDATION RESULTS:");
+                Console.WriteLine("═══════════════════════════════════════════════════════════");
+                Console.WriteLine();
+
+                var endpointsByTag = spec.EndpointTests.Values
+                    .GroupBy(e => e.Tags.FirstOrDefault() ?? "General")
+                    .OrderBy(g => g.Key)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                var totalEndpoints = 0;
+                var endpointsWithSchema = 0;
+                var endpointsWithoutSchema = 0;
+
+                foreach (var tagGroup in endpointsByTag)
+                {
+                    var tag = tagGroup.Key;
+                    var endpoints = tagGroup.Value;
+
+                    Console.WriteLine($"📁 {tag.ToUpper()}:");
+                    Console.WriteLine();
+
+                    foreach (var endpoint in endpoints.OrderBy(e => e.Path).ThenBy(e => e.Method))
+                    {
+                        totalEndpoints++;
+                        var hasSchema = await ValidateEndpointSchema(endpoint, spec);
+                        
+                        if (hasSchema)
+                        {
+                            endpointsWithSchema++;
+                            Console.WriteLine($"   ✅ {endpoint.Method.PadRight(6)} {endpoint.Path}");
+                            Console.WriteLine($"      📝 {endpoint.Summary ?? "No summary"}");
+                        }
+                        else
+                        {
+                            endpointsWithoutSchema++;
+                            Console.WriteLine($"   ❌ {endpoint.Method.PadRight(6)} {endpoint.Path}");
+                            Console.WriteLine($"      📝 {endpoint.Summary ?? "No summary"}");
+                            Console.WriteLine($"      ⚠️  No response schema defined");
+                        }
+                        Console.WriteLine();
+                    }
+                }
+
+                Console.WriteLine("═══════════════════════════════════════════════════════════");
+                Console.WriteLine("📊 SUMMARY:");
+                Console.WriteLine($"   🎯 Total Endpoints: {totalEndpoints}");
+                Console.WriteLine($"   ✅ With Schema: {endpointsWithSchema} ({(totalEndpoints > 0 ? (endpointsWithSchema * 100.0 / totalEndpoints):0):F1}%)");
+                Console.WriteLine($"   ❌ Without Schema: {endpointsWithoutSchema} ({(totalEndpoints > 0 ? (endpointsWithoutSchema * 100.0 / totalEndpoints):0):F1}%)");
+                Console.WriteLine();
+
+                if (endpointsWithoutSchema > 0)
+                {
+                    Console.WriteLine("💡 RECOMMENDATIONS:");
+                    Console.WriteLine("   • Add response schemas to your OpenAPI specification");
+                    Console.WriteLine("   • Use 'components/schemas' to define reusable schemas");
+                    Console.WriteLine("   • Ensure 200/201 responses have 'content/application/json/schema'");
+                    Console.WriteLine();
+                }
+
+                if (endpointsWithSchema > 0)
+                {
+                    Console.WriteLine("🎉 GREAT! Your OpenAPI spec has schema definitions.");
+                    Console.WriteLine("   Generated tests will include automatic schema validation!");
+                    Console.WriteLine();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error validating schemas: {ex.Message}");
+            }
+
+            PauseForUser();
+        }
+
+        private async Task<bool> ValidateEndpointSchema(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
+        {
+            try
+            {
+                // Check if endpoint has responses
+                if (!endpoint.Responses.Any())
+                {
+                    return false;
+                }
+
+                // Look for success responses (200, 201, etc.)
+                var successResponses = endpoint.Responses.Where(r => r.Key.StartsWith("2")).ToList();
+                if (!successResponses.Any())
+                {
+                    return false;
+                }
+
+                // Check if any success response has a schema
+                foreach (var response in successResponses)
+                {
+                    var responseKey = $"{endpoint.Method}:{endpoint.Path}:{response.Key}";
+                    
+                    // Try to find the actual OpenAPI response in the document
+                    var pathItem = spec.Document.Paths.FirstOrDefault(p => p.Key == endpoint.Path);
+                    if (pathItem.Value == null) continue;
+
+                    var operation = pathItem.Value.Operations.FirstOrDefault(o => 
+                        o.Key.ToString().Equals(endpoint.Method, StringComparison.OrdinalIgnoreCase));
+                    if (operation.Value == null) continue;
+
+                    var openApiResponse = operation.Value.Responses.FirstOrDefault(r => r.Key == response.Key);
+                    if (openApiResponse.Value == null) continue;
+
+                    // Check if response has content with JSON schema
+                    var jsonContent = openApiResponse.Value.Content?.FirstOrDefault(c => 
+                        c.Key.Contains("application/json") || c.Key.Contains("json"));
+
+                    if (jsonContent.HasValue && jsonContent.Value.Value?.Schema != null)
+                    {
+                        var schema = jsonContent.Value.Value.Schema;
+                        
+                        // Check if schema has meaningful content
+                        if (!string.IsNullOrEmpty(schema.Type) || 
+                            schema.Properties?.Any() == true || 
+                            schema.Items != null ||
+                            schema.AllOf?.Any() == true ||
+                            schema.OneOf?.Any() == true ||
+                            schema.AnyOf?.Any() == true)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Error validating schema for {endpoint.Method} {endpoint.Path}: {ex.Message}");
+                return false;
+            }
         }
 
         private string GetActionEmoji(string action)
