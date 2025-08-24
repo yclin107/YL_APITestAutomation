@@ -485,7 +485,7 @@ namespace API.Core.Services.AzureDevOps
 
                 // Test 1: Get project info
                 Console.Write("1. Testing project access... ");
-                var projectClient = _witClient.VssConnection.GetClient<ProjectHttpClient>();
+                var projectClient = _connection.GetClient<ProjectHttpClient>();
                 var project = await projectClient.GetProject(_config.ProjectName);
                 Console.WriteLine($"✅ Project found: {project.Name}");
 
