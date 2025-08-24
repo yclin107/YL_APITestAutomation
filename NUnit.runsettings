@@ -2,7 +2,7 @@
 <RunSettings>
   <NUnit>
     <!-- Number of worker threads to use for running tests -->
-    <NumberOfTestWorkers>4</NumberOfTestWorkers>
+    <NumberOfTestWorkers>32</NumberOfTestWorkers>
     
     <!-- Run tests in parallel -->
     <ParallelizeTestCollections>true</ParallelizeTestCollections>
