@@ -57,6 +57,165 @@ namespace API.Core.Services.OpenAPI
             return sb.ToString();
         }
 
+        private static void GenerateSchemaValidationMethods(StringBuilder sb, List<OpenApiEndpointTest> endpoints, OpenApiTestSpec spec)
+        {
+            sb.AppendLine("        #region Schema Validation Methods");
+            sb.AppendLine();
+
+            foreach (var endpoint in endpoints)
+            {
+                var methodName = SanitizeIdentifier(endpoint.Method + "_" + endpoint.Path);
+                var schemaKey = $"{endpoint.Method}:{endpoint.Path}";
+                
+                // Try to get schema from successful responses (200, 201, etc.)
+                var successResponse = endpoint.Responses.FirstOrDefault(r => 
+                    r.Key.StartsWith("2") && r.Value.Content?.Any() == true);
+                
+                if (successResponse.Value != null)
+                {
+                    GenerateSchemaValidationMethod(sb, methodName, schemaKey, successResponse.Value, spec);
+                }
+                else
+                {
+                    // Generate a basic validation method if no schema is available
+                    GenerateBasicValidationMethod(sb, methodName);
+                }
+            }
+
+            sb.AppendLine("        #endregion");
+            sb.AppendLine();
+        }
+
+        private static void GenerateSchemaValidationMethod(StringBuilder sb, string methodName, string schemaKey, OpenApiResponse response, OpenApiTestSpec spec)
+        {
+            sb.AppendLine($"        private async Task ValidateResponseSchema_{methodName}(string jsonResponse)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            try");
+            sb.AppendLine("            {");
+            
+            // Generate schema JSON from OpenAPI response
+            var schemaJson = GenerateSchemaFromResponse(response);
+            
+            sb.AppendLine($"                var schemaJson = @\"{EscapeJsonForString(schemaJson)}\";");
+            sb.AppendLine("                var schema = await JsonSchema.FromJsonAsync(schemaJson);");
+            sb.AppendLine("                var validator = new JsonSchemaValidator();");
+            sb.AppendLine("                var errors = validator.Validate(jsonResponse, schema);");
+            sb.AppendLine();
+            sb.AppendLine("                if (errors.Any())");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    var errorMessages = errors.Select(e => $\"{e.Path}: {e.Kind} - {e.Property}\");");
+            sb.AppendLine("                    var allErrors = string.Join(\", \", errorMessages);");
+            sb.AppendLine("                    Assert.Fail($\"Response schema validation failed. Errors: {allErrors}\");");
+            sb.AppendLine("                }");
+            sb.AppendLine("            }");
+            sb.AppendLine("            catch (Exception ex)");
+            sb.AppendLine("            {");
+            sb.AppendLine("                Assert.Fail($\"Schema validation error: {ex.Message}\");");
+            sb.AppendLine("            }");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+        }
+
+        private static void GenerateBasicValidationMethod(StringBuilder sb, string methodName)
+        {
+            sb.AppendLine($"        private void ValidateResponseSchema_{methodName}(string jsonResponse)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            // Basic validation - ensure response is valid JSON");
+            sb.AppendLine("            try");
+            sb.AppendLine("            {");
+            sb.AppendLine("                System.Text.Json.JsonDocument.Parse(jsonResponse);");
+            sb.AppendLine("                Assert.That(string.IsNullOrEmpty(jsonResponse), Is.False, \"Response should not be empty\");");
+            sb.AppendLine("            }");
+            sb.AppendLine("            catch (System.Text.Json.JsonException ex)");
+            sb.AppendLine("            {");
+            sb.AppendLine("                Assert.Fail($\"Response is not valid JSON: {ex.Message}\");");
+            sb.AppendLine("            }");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+        }
+
+        private static string GenerateSchemaFromResponse(OpenApiResponse response)
+        {
+            try
+            {
+                // Try to get JSON content schema
+                var jsonContent = response.Content?.FirstOrDefault(c => 
+                    c.Key.Contains("application/json") || c.Key.Contains("json"));
+                
+                if (jsonContent?.Value?.Schema != null)
+                {
+                    return ConvertOpenApiSchemaToJsonSchema(jsonContent.Value.Schema);
+                }
+                
+                // Fallback to generic object schema
+                return @"{
+                    ""type"": ""object"",
+                    ""additionalProperties"": true,
+                    ""description"": ""Generic response schema""
+                }";
+            }
+            catch
+            {
+                return @"{
+                    ""type"": ""object"",
+                    ""additionalProperties"": true,
+                    ""description"": ""Fallback response schema""
+                }";
+            }
+        }
+
+        private static string ConvertOpenApiSchemaToJsonSchema(OpenApiSchema openApiSchema)
+        {
+            var schema = new Dictionary<string, object>();
+            
+            if (!string.IsNullOrEmpty(openApiSchema.Type))
+            {
+                schema["type"] = openApiSchema.Type;
+            }
+            else
+            {
+                schema["type"] = "object";
+            }
+            
+            if (openApiSchema.Properties?.Any() == true)
+            {
+                var properties = new Dictionary<string, object>();
+                foreach (var prop in openApiSchema.Properties)
+                {
+                    var propSchema = new Dictionary<string, object>();
+                    propSchema["type"] = prop.Value.Type ?? "string";
+                    
+                    if (!string.IsNullOrEmpty(prop.Value.Format))
+                    {
+                        propSchema["format"] = prop.Value.Format;
+                    }
+                    
+                    properties[prop.Key] = propSchema;
+                }
+                schema["properties"] = properties;
+            }
+            
+            if (openApiSchema.Required?.Any() == true)
+            {
+                schema["required"] = openApiSchema.Required.ToArray();
+            }
+            
+            schema["additionalProperties"] = openApiSchema.AdditionalPropertiesAllowed;
+            
+            return System.Text.Json.JsonSerializer.Serialize(schema, new System.Text.Json.JsonSerializerOptions 
+            { 
+                WriteIndented = true 
+            });
+        }
+
+        private static string EscapeJsonForString(string json)
+        {
+            return json.Replace("\"", "\\\"")
+                      .Replace("\r", "")
+                      .Replace("\n", "\\n")
+                      .Replace("\t", "\\t");
+        }
+
         private static void GenerateEndpointTestsWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec, string sanitizedTag, bool forceUnauthorizedTest = false)
         {
             var methodName = SanitizeIdentifier(endpoint.OperationId);
