@@ -107,6 +107,9 @@ namespace API.Core.Services.OpenAPI
                 return GeneratePreview(spec);
             }
 
+            // Enable debug mode for schema generation
+            Console.WriteLine("🔍 Analyzing OpenAPI schemas...");
+
             // Group endpoints by tags for organized folder structure
             var endpointsByTag = spec.EndpointTests.Values
                 .GroupBy(e => e.Tags.FirstOrDefault() ?? "General")

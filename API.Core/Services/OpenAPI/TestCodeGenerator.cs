@@ -169,42 +169,23 @@ namespace API.Core.Services.OpenAPI
 
         private static string GenerateSchemaFromResponse(OpenApiResponse response, OpenApiTestSpec spec, string schemaKey)
         {
-            Console.WriteLine($"🔍 DEBUG: Generating schema from response for {schemaKey}...");
+            Console.WriteLine($"         🔍 Analyzing schema for {schemaKey}...");
             
             // First, let's check what we actually have in the response
             if (response.Content == null)
             {
-                Console.WriteLine($"❌ Response.Content is NULL for {schemaKey}");
+                Console.WriteLine($"         ❌ Response.Content is NULL");
                 return CreateFallbackSchema("Response.Content is null");
             }
             
-            Console.WriteLine($"📋 Response content types: {string.Join(", ", response.Content.Keys)}");
-            Console.WriteLine($"📊 Content count: {response.Content.Count}");
+            Console.WriteLine($"         📋 Content types: {string.Join(", ", response.Content.Keys)}");
             
             try
             {
-                // Debug each content type
-                foreach (var contentType in response.Content)
-                {
-                    Console.WriteLine($"🔍 Content-Type: '{contentType.Key}'");
-                    Console.WriteLine($"   - MediaType is null: {contentType.Value == null}");
-                    if (contentType.Value != null)
-                    {
-                        Console.WriteLine($"   - Schema is null: {contentType.Value.Schema == null}");
-                        if (contentType.Value.Schema != null)
-                        {
-                            var schema = contentType.Value.Schema;
-                            Console.WriteLine($"   - Schema Type: '{schema.Type ?? "null"}'");
-                            Console.WriteLine($"   - Schema Properties: {schema.Properties?.Count ?? 0}");
-                            Console.WriteLine($"   - Schema Reference: '{schema.Reference?.Id ?? "null"}'");
-                            Console.WriteLine($"   - Schema Items: {schema.Items != null}");
-                        }
-                    }
-                }
 
                 if (!response.Content.Any())
                 {
-                    Console.WriteLine($"❌ No content found in response");
+                    Console.WriteLine($"         ❌ No content found");
                     return CreateFallbackSchema("No content in response");
                 }
 
@@ -215,68 +196,56 @@ namespace API.Core.Services.OpenAPI
                     c.Key.Equals("*/*", StringComparison.OrdinalIgnoreCase) ||
                     c.Key.Equals("application/*", StringComparison.OrdinalIgnoreCase));
                 
-                Console.WriteLine($"🔍 JSON Content found: {jsonContent.Key != null}");
-                if (jsonContent.Key != null)
-                {
-                    Console.WriteLine($"🔍 Selected content-type: '{jsonContent.Key}'");
-                }
+                Console.WriteLine($"         🔍 JSON Content: {(jsonContent.Key != null ? $"Found ({jsonContent.Key})" : "Not found")}");
                 
                 if (jsonContent.Key == null)
                 {
-                    Console.WriteLine($"❌ No JSON content type found. Available: {string.Join(", ", response.Content.Keys)}");
+                    Console.WriteLine($"         ❌ No JSON content type found");
                     return CreateFallbackSchema("No JSON content type");
                 }
                 
                 var mediaType = jsonContent.Value;
                 if (mediaType?.Schema == null)
                 {
-                    Console.WriteLine($"❌ No schema found in media type for content-type: {jsonContent.Key}");
+                    Console.WriteLine($"         ❌ No schema in media type");
                     return CreateFallbackSchema("No schema in media type");
                 }
 
                 var openApiSchema = mediaType.Schema;
-                Console.WriteLine($"✅ Schema found! Type: '{openApiSchema.Type ?? "undefined"}'");
-                Console.WriteLine($"📝 Properties count: {openApiSchema.Properties?.Count ?? 0}");
-                Console.WriteLine($"🔗 Reference: '{openApiSchema.Reference?.Id ?? "none"}'");
-                Console.WriteLine($"📦 Items: {openApiSchema.Items != null}");
-                Console.WriteLine($"🔢 AllOf count: {openApiSchema.AllOf?.Count ?? 0}");
-                Console.WriteLine($"🔢 OneOf count: {openApiSchema.OneOf?.Count ?? 0}");
-                Console.WriteLine($"🔢 AnyOf count: {openApiSchema.AnyOf?.Count ?? 0}");
+                Console.WriteLine($"         ✅ Schema found! Type: '{openApiSchema.Type ?? "undefined"}', Props: {openApiSchema.Properties?.Count ?? 0}, Ref: '{openApiSchema.Reference?.Id ?? "none"}'");
                 
                 // Handle schema references
                 if (openApiSchema.Reference != null)
                 {
-                    Console.WriteLine($"🔗 Resolving schema reference: {openApiSchema.Reference.Id}");
+                    Console.WriteLine($"         🔗 Resolving reference: {openApiSchema.Reference.Id}");
                     var resolvedSchema = ResolveSchemaReference(openApiSchema.Reference, spec);
                     if (resolvedSchema != null)
                     {
                         openApiSchema = resolvedSchema;
-                        Console.WriteLine($"✅ Reference resolved! Type: {openApiSchema.Type ?? "undefined"}");
+                        Console.WriteLine($"         ✅ Reference resolved!");
                     }
                 }
                 
                 var convertedSchema = ConvertOpenApiSchemaToJsonSchema(openApiSchema);
-                Console.WriteLine($"🎯 Generated schema length: {convertedSchema.Length} characters");
-                Console.WriteLine($"🎯 Generated schema preview: {convertedSchema.Substring(0, Math.Min(200, convertedSchema.Length))}...");
                 
                 // Validate that we have a meaningful schema
                 var hasRealSchema = HasMeaningfulSchema(openApiSchema, convertedSchema);
-                Console.WriteLine($"🔍 Has meaningful schema: {hasRealSchema}");
+                Console.WriteLine($"         🔍 Meaningful schema: {hasRealSchema}");
                 
                 if (hasRealSchema)
                 {
-                    Console.WriteLine($"✅ Real schema generated successfully");
+                    Console.WriteLine($"         ✅ Real schema generated ({convertedSchema.Length} chars)");
                     return convertedSchema;
                 }
                 else
                 {
-                    Console.WriteLine($"⚠️  Schema seems empty or invalid, using fallback");
+                    Console.WriteLine($"         ⚠️  Schema empty/invalid, using fallback");
                     return CreateFallbackSchema("Schema validation failed");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error generating schema: {ex.Message}");
+                Console.WriteLine($"         ❌ Error: {ex.Message}");
                 return CreateFallbackSchema($"Error: {ex.Message}");
             }
         }
@@ -330,38 +299,33 @@ namespace API.Core.Services.OpenAPI
             {
                 if (spec.Document?.Components?.Schemas == null)
                 {
-                    Console.WriteLine($"❌ No components/schemas found in document");
+                    Console.WriteLine($"            ❌ No components/schemas in document");
                     return null;
                 }
                 
                 var schemaName = reference.Id;
                 if (spec.Document.Components.Schemas.TryGetValue(schemaName, out var referencedSchema))
                 {
-                    Console.WriteLine($"✅ Found referenced schema: {schemaName}");
+                    Console.WriteLine($"            ✅ Found referenced schema: {schemaName}");
                     return referencedSchema;
                 }
                 else
                 {
-                    Console.WriteLine($"❌ Referenced schema not found: {schemaName}");
-                    Console.WriteLine($"📋 Available schemas: {string.Join(", ", spec.Document.Components.Schemas.Keys)}");
+                    Console.WriteLine($"            ❌ Schema '{schemaName}' not found");
+                    var availableSchemas = spec.Document.Components.Schemas.Keys.Take(5).ToList();
+                    Console.WriteLine($"            📋 Available: {string.Join(", ", availableSchemas)}{(spec.Document.Components.Schemas.Keys.Count > 5 ? "..." : "")}");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                var availableSchemas = spec.Document.Components.Schemas.Keys.ToList();
-                Console.WriteLine($"📋 Available schemas ({availableSchemas.Count}): {string.Join(", ", availableSchemas.Take(10))}");
-                if (availableSchemas.Count > 10)
-                {
-                    Console.WriteLine($"    ... and {availableSchemas.Count - 10} more");
-                }
+                Console.WriteLine($"            ❌ Error resolving reference: {ex.Message}");
                 return null;
             }
         }
         
         private static string CreateFallbackSchema(string reason)
         {
-            Console.WriteLine($"⚠️  Creating fallback schema: {reason}");
             return @"{
                 ""type"": ""object"",
                 ""additionalProperties"": true,
@@ -371,11 +335,6 @@ namespace API.Core.Services.OpenAPI
 
         private static string ConvertOpenApiSchemaToJsonSchema(OpenApiSchema openApiSchema)
         {
-            Console.WriteLine($"🔄 Converting OpenAPI schema to JSON schema...");
-            Console.WriteLine($"   - Input Type: '{openApiSchema.Type ?? "null"}'");
-            Console.WriteLine($"   - Input Properties: {openApiSchema.Properties?.Count ?? 0}");
-            Console.WriteLine($"   - Input Items: {openApiSchema.Items != null}");
-            
             try
             {
                 var schema = new Dictionary<string, object>();
@@ -490,13 +449,10 @@ namespace API.Core.Services.OpenAPI
                     WriteIndented = true 
                 });
                 
-                Console.WriteLine($"✅ Conversion successful. Result length: {result.Length}");
                 return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error converting OpenAPI schema: {ex.Message}");
-                Console.WriteLine($"   Stack trace: {ex.StackTrace}");
                 return @"{
                     ""type"": ""object"",
                     ""additionalProperties"": true,
