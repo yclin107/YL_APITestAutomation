@@ -32,7 +32,7 @@ public async Task EncryptAllProfilesAsync(string masterPassword)
             }
         }
 
-        public async Task DecryptAllProfilesAsync(string masterPassword)
+    public async Task DecryptAllProfilesAsync(string masterPassword)
         {
             var encryptedPath = Path.Combine(_profilesPath, "Encrypted");
             if (!Directory.Exists(encryptedPath))
