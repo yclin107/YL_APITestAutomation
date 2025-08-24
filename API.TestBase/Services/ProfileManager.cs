@@ -12,10 +12,10 @@ namespace API.TestBase.Services
 
         public ProfileManager()
         {
-            // Point to the Profiles folder in API.TestBase
+            // Point to the Config/Profiles folder in API.TestBase
             var currentDir = AppContext.BaseDirectory;
             var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            _profilesPath = Path.Combine(solutionRoot, "API.TestBase", "Profiles");
+            _profilesPath = Path.Combine(solutionRoot, "API.TestBase", "Config", "Profiles");
             _profilesPath = Path.GetFullPath(_profilesPath);
         }
 
