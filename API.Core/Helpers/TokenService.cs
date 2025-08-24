@@ -80,7 +80,6 @@ namespace API.Core.Helpers
         
         private static async Task<TenantProfile?> GetProfileFromEnvironment(ProfileManager profileManager)
         {
-            var profileManager = new ProfileManager();
             var profilePath = Environment.GetEnvironmentVariable("TEST_PROFILE");
             var masterPassword = Environment.GetEnvironmentVariable("MASTER_PASSWORD");
             
