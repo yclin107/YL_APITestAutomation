@@ -7,11 +7,13 @@ namespace API.Core.Services.OpenAPI
     {
         private readonly OpenApiTestManager _manager;
         private readonly ProfileManager _profileManager;
+        private readonly API.Core.Services.AzureDevOps.AzureDevOpsService _azureDevOpsService;
 
         public InteractiveMenuWithArrows()
         {
             _manager = new OpenApiTestManager();
             _profileManager = new ProfileManager();
+            _azureDevOpsService = new API.Core.Services.AzureDevOps.AzureDevOpsService();
         }
 
         public async Task ShowMenuAsync()
