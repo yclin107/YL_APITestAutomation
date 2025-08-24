@@ -49,6 +49,88 @@ namespace API.Core.Helpers
 
         public async Task SaveProfileAsync(TenantProfile profile, string team, string environment, string tenantId, string? masterPassword = null)
         {
+            // Always read the current file content to preserve exact structure
+            var filePath = Path.Combine(_profilesPath, team, environment, $"{tenantId}.json");
+            string currentContent = "";
+            
+            if (File.Exists(filePath))
+            {
+                currentContent = await File.ReadAllTextAsync(filePath);
+                
+                // If file is encrypted, decrypt it first to get the current structure
+                if (IsEncrypted(currentContent))
+                {
+                    if (string.IsNullOrEmpty(masterPassword))
+                        throw new InvalidOperationException("Profile is encrypted but no master password provided for reading current content");
+                    
+                    currentContent = DecryptContent(currentContent, masterPassword);
+                }
+            }
+            else
+            {
+                // If file doesn't exist, serialize the profile normally
+                var options = new JsonSerializerOptions 
+                { 
+                    WriteIndented = true,
+                    PropertyNameCaseInsensitive = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+                currentContent = JsonSerializer.Serialize(profile, options);
+            }
+            
+            // Now encrypt the current content if password is provided
+            var finalContent = currentContent;
+            if (!string.IsNullOrEmpty(masterPassword))
+            {
+                finalContent = EncryptContent(currentContent, masterPassword);
+            }
+
+            var dirPath = Path.Combine(_profilesPath, team, environment);
+            Directory.CreateDirectory(dirPath);
+            
+            await File.WriteAllTextAsync(filePath, finalContent);
+        }
+
+        public async Task EncryptProfileAsync(string team, string environment, string tenantId, string masterPassword)
+        {
+            var filePath = Path.Combine(_profilesPath, team, environment, $"{tenantId}.json");
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"Profile file not found: {filePath}");
+
+            var currentContent = await File.ReadAllTextAsync(filePath);
+            
+            // If already encrypted, skip
+            if (IsEncrypted(currentContent))
+            {
+                Console.WriteLine($"⏭️  Profile {team}/{environment}/{tenantId} is already encrypted");
+                return;
+            }
+
+            // Encrypt the current content exactly as it is
+            var encryptedContent = EncryptContent(currentContent, masterPassword);
+            await File.WriteAllTextAsync(filePath, encryptedContent);
+        }
+
+        public async Task DecryptProfileAsync(string team, string environment, string tenantId, string masterPassword)
+        {
+            var filePath = Path.Combine(_profilesPath, team, environment, $"{tenantId}.json");
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"Profile file not found: {filePath}");
+
+            var currentContent = await File.ReadAllTextAsync(filePath);
+            
+            // If not encrypted, skip
+            if (!IsEncrypted(currentContent))
+            {
+                Console.WriteLine($"⏭️  Profile {team}/{environment}/{tenantId} is already decrypted");
+                return;
+            }
+
+            // Decrypt and save the exact original content
+            var decryptedContent = DecryptContent(currentContent, masterPassword);
+            await File.WriteAllTextAsync(filePath, decryptedContent);
+        }
             var options = new JsonSerializerOptions 
             { 
                 WriteIndented = true,
@@ -135,11 +217,14 @@ namespace API.Core.Helpers
                     foreach (var file in Directory.GetFiles(envDir, "*.json"))
                     {
                         var tenantId = Path.GetFileNameWithoutExtension(file);
-                        var profile = await LoadProfileAsync(teamName, envName, tenantId);
-                        if (profile != null)
+                        try
                         {
-                            await SaveProfileAsync(profile, teamName, envName, tenantId, masterPassword);
+                            await EncryptProfileAsync(teamName, envName, tenantId, masterPassword);
                             Console.WriteLine($"✅ Encrypted profile: {teamName}/{envName}/{tenantId}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ Failed to encrypt {teamName}/{envName}/{tenantId}: {ex.Message}");
                         }
                     }
                 }
@@ -162,12 +247,8 @@ namespace API.Core.Helpers
                         var tenantId = Path.GetFileNameWithoutExtension(file);
                         try
                         {
-                            var profile = await LoadProfileAsync(teamName, envName, tenantId, masterPassword);
-                            if (profile != null)
-                            {
-                                await SaveProfileAsync(profile, teamName, envName, tenantId); // Save without encryption
-                                Console.WriteLine($"✅ Decrypted profile: {teamName}/{envName}/{tenantId}");
-                            }
+                            await DecryptProfileAsync(teamName, envName, tenantId, masterPassword);
+                            Console.WriteLine($"✅ Decrypted profile: {teamName}/{envName}/{tenantId}");
                         }
                         catch (Exception ex)
                         {

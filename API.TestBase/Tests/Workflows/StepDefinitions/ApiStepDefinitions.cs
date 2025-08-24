@@ -26,10 +26,36 @@ namespace API.TestBase.Tests.Workflows.StepDefinitions
 
         public void AuthenticateUser()
         {
-            AllureApi.Step("Authenticate user", () =>
+            AllureApi.Step("Authenticate user", async () =>
             {
-                var user = ConfigSetup.GetUser(_tenant, _userId);
-                _token = TokenService.PPSProformaToken(_tenant, user);
+                // Get profile from environment
+                var profileManager = new API.Core.Helpers.ProfileManager();
+                var profilePath = Environment.GetEnvironmentVariable("TEST_PROFILE");
+                var masterPassword = Environment.GetEnvironmentVariable("MASTER_PASSWORD");
+                
+                if (string.IsNullOrEmpty(profilePath))
+                    throw new InvalidOperationException("TEST_PROFILE environment variable not set");
+                    
+                var parts = profilePath.Split('/');
+                if (parts.Length != 3)
+                    throw new InvalidOperationException($"Invalid profile path format: {profilePath}");
+                    
+                var profile = await profileManager.LoadProfileAsync(parts[0], parts[1], parts[2], masterPassword);
+                if (profile == null)
+                    throw new InvalidOperationException($"Profile not found: {profilePath}");
+                
+                var user = profileManager.GetRandomUser(profile);
+                var userConfig = new API.Core.Helpers.UserConfig
+                {
+                    LoginId = user.LoginId,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Password = user.Password,
+                    DefaultTimekeeperIndex = user.DefaultTimekeeperIndex,
+                    DefaultTimekeeperNumber = user.DefaultTimekeeperNumber
+                };
+                
+                _token = await API.Core.Helpers.TokenService.PPSProformaToken(_tenant, userConfig);
             });
         }
 
