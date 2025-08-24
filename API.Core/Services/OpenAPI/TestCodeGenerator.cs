@@ -1,6 +1,5 @@
 using Microsoft.OpenApi.Models;
 using System.Text;
-using System.Text;
 using System.Net;
 using API.Core.Models;
 using System.Text.Json;
@@ -93,12 +92,10 @@ namespace API.Core.Services.OpenAPI
         {
             var endpointInfo = ExtractEndpointFromSchemaKey(schemaKey);
             
-            var endpointInfo = ExtractEndpointFromSchemaKey(schemaKey);
-            
             sb.AppendLine($"        private async Task ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
             sb.AppendLine("            // Add response as Allure attachment for viewing");
-            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", Encoding.UTF8.GetBytes(jsonResponse));");
+            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(jsonResponse));");
             sb.AppendLine();
             
             // Generate schema JSON from OpenAPI response
@@ -112,6 +109,7 @@ namespace API.Core.Services.OpenAPI
                 Console.WriteLine($"⚠️  Memory error generating schema for {endpointInfo}: {ex.Message}");
                 schemaJson = CreateFallbackSchema("Memory allocation error - schema too large", endpointInfo);
             }
+            
             var isRealSchema = !schemaJson.Contains("\"description\": \"Generic response schema\"") && 
                               !schemaJson.Contains("\"description\": \"Fallback response schema\"");
 
@@ -122,7 +120,7 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("            {");
                 sb.AppendLine("                // Add expected schema as Allure attachment");
                 sb.AppendLine($"                var schemaJson = @\"{FormatJsonForCSharp(schemaJson)}\";");
-                sb.AppendLine("                AllureApi.AddAttachment(\"Expected Schema\", \"application/json\", Encoding.UTF8.GetBytes(schemaJson));");
+                sb.AppendLine("                AllureApi.AddAttachment(\"Expected Schema\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(schemaJson));");
                 sb.AppendLine();
                 sb.AppendLine("                var schema = await NJsonSchema.JsonSchema.FromJsonAsync(schemaJson);");
                 sb.AppendLine("                var validator = new JsonSchemaValidator();");
@@ -181,7 +179,7 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine($"        private void ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
             sb.AppendLine("            // Add response as Allure attachment for viewing");
-            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", Encoding.UTF8.GetBytes(jsonResponse));");
+            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(jsonResponse));");
             sb.AppendLine();
             sb.AppendLine("            // Basic validation - ensure response is valid JSON");
             sb.AppendLine("            try");
