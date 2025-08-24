@@ -2,6 +2,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Net;
 using API.Core.Models;
+using System.Text.Json;
 
 namespace API.Core.Services.OpenAPI
 {
@@ -144,7 +145,8 @@ namespace API.Core.Services.OpenAPI
                 
                 if (jsonContent.HasValue && jsonContent.Value.Value?.Schema != null)
                 {
-                    return ConvertOpenApiSchemaToJsonSchema(jsonContent.Value.Value.Schema);
+                    var openApiSchema = jsonContent.Value.Value.Schema;
+                    return ConvertOpenApiSchemaToJsonSchema(openApiSchema);
                 }
                 
                 // Fallback to generic object schema
@@ -166,46 +168,143 @@ namespace API.Core.Services.OpenAPI
 
         private static string ConvertOpenApiSchemaToJsonSchema(OpenApiSchema openApiSchema)
         {
-            var schema = new Dictionary<string, object>();
-            
-            if (!string.IsNullOrEmpty(openApiSchema.Type))
+            try
             {
-                schema["type"] = openApiSchema.Type;
-            }
-            else
-            {
-                schema["type"] = "object";
-            }
-            
-            if (openApiSchema.Properties?.Any() == true)
-            {
-                var properties = new Dictionary<string, object>();
-                foreach (var prop in openApiSchema.Properties)
+                var schema = new Dictionary<string, object>();
+                
+                // Handle different schema types
+                if (!string.IsNullOrEmpty(openApiSchema.Type))
                 {
-                    var propSchema = new Dictionary<string, object>();
-                    propSchema["type"] = prop.Value.Type ?? "string";
-                    
-                    if (!string.IsNullOrEmpty(prop.Value.Format))
+                    schema["type"] = openApiSchema.Type;
+                }
+                else if (openApiSchema.Properties?.Any() == true)
+                {
+                    schema["type"] = "object";
+                }
+                else if (openApiSchema.Items != null)
+                {
+                    schema["type"] = "array";
+                }
+                else
+                {
+                    schema["type"] = "object";
+                }
+                
+                // Handle object properties
+                if (openApiSchema.Properties?.Any() == true)
+                {
+                    var properties = new Dictionary<string, object>();
+                    foreach (var prop in openApiSchema.Properties)
                     {
-                        propSchema["format"] = prop.Value.Format;
+                        var propSchema = new Dictionary<string, object>();
+                        
+                        // Set property type
+                        propSchema["type"] = ConvertOpenApiTypeToJsonSchemaType(prop.Value.Type ?? "string");
+                        
+                        // Add format if specified
+                        if (!string.IsNullOrEmpty(prop.Value.Format))
+                        {
+                            propSchema["format"] = prop.Value.Format;
+                        }
+                        
+                        // Add description if available
+                        if (!string.IsNullOrEmpty(prop.Value.Description))
+                        {
+                            propSchema["description"] = prop.Value.Description;
+                        }
+                        
+                        // Handle nested objects
+                        if (prop.Value.Properties?.Any() == true)
+                        {
+                            propSchema["type"] = "object";
+                            var nestedProps = new Dictionary<string, object>();
+                            foreach (var nestedProp in prop.Value.Properties)
+                            {
+                                nestedProps[nestedProp.Key] = new Dictionary<string, object>
+                                {
+                                    ["type"] = ConvertOpenApiTypeToJsonSchemaType(nestedProp.Value.Type ?? "string")
+                                };
+                            }
+                            propSchema["properties"] = nestedProps;
+                        }
+                        
+                        // Handle arrays
+                        if (prop.Value.Items != null)
+                        {
+                            propSchema["type"] = "array";
+                            propSchema["items"] = new Dictionary<string, object>
+                            {
+                                ["type"] = ConvertOpenApiTypeToJsonSchemaType(prop.Value.Items.Type ?? "string")
+                            };
+                        }
+                        
+                        properties[prop.Key] = propSchema;
+                    }
+                    schema["properties"] = properties;
+                }
+                
+                // Handle array items
+                if (openApiSchema.Items != null)
+                {
+                    var itemSchema = new Dictionary<string, object>
+                    {
+                        ["type"] = ConvertOpenApiTypeToJsonSchemaType(openApiSchema.Items.Type ?? "object")
+                    };
+                    
+                    if (openApiSchema.Items.Properties?.Any() == true)
+                    {
+                        itemSchema["type"] = "object";
+                        var itemProperties = new Dictionary<string, object>();
+                        foreach (var prop in openApiSchema.Items.Properties)
+                        {
+                            itemProperties[prop.Key] = new Dictionary<string, object>
+                            {
+                                ["type"] = ConvertOpenApiTypeToJsonSchemaType(prop.Value.Type ?? "string")
+                            };
+                        }
+                        itemSchema["properties"] = itemProperties;
                     }
                     
-                    properties[prop.Key] = propSchema;
+                    schema["items"] = itemSchema;
                 }
-                schema["properties"] = properties;
+                
+                // Handle required fields
+                if (openApiSchema.Required?.Any() == true)
+                {
+                    schema["required"] = openApiSchema.Required.ToArray();
+                }
+                
+                // Set additional properties
+                schema["additionalProperties"] = openApiSchema.AdditionalPropertiesAllowed;
+                
+                return JsonSerializer.Serialize(schema, new JsonSerializerOptions 
+                { 
+                    WriteIndented = true 
+                });
             }
-            
-            if (openApiSchema.Required?.Any() == true)
+            catch (Exception ex)
             {
-                schema["required"] = openApiSchema.Required.ToArray();
+                Console.WriteLine($"⚠️  Error converting OpenAPI schema: {ex.Message}");
+                return @"{
+                    ""type"": ""object"",
+                    ""additionalProperties"": true,
+                    ""description"": ""Fallback schema due to conversion error""
+                }";
             }
-            
-            schema["additionalProperties"] = openApiSchema.AdditionalPropertiesAllowed;
-            
-            return System.Text.Json.JsonSerializer.Serialize(schema, new System.Text.Json.JsonSerializerOptions 
-            { 
-                WriteIndented = true 
-            });
+        }
+        
+        private static string ConvertOpenApiTypeToJsonSchemaType(string openApiType)
+        {
+            return openApiType?.ToLower() switch
+            {
+                "integer" => "integer",
+                "number" => "number", 
+                "string" => "string",
+                "boolean" => "boolean",
+                "array" => "array",
+                "object" => "object",
+                _ => "string"
+            };
         }
 
         private static string EscapeJsonForString(string json)
@@ -605,25 +704,37 @@ namespace API.Core.Services.OpenAPI
             var sb = new StringBuilder();
             
             sb.AppendLine();
+            sb.AppendLine("        /// <summary>");
+            sb.AppendLine("        /// Generates test values for different parameter types");
+            sb.AppendLine("        /// Used to populate required parameters in API calls");
+            sb.AppendLine("        /// </summary>");
             sb.AppendLine("        private object GetTestValue(string type)");
             sb.AppendLine("        {");
             sb.AppendLine("            return type?.ToLower() switch");
             sb.AppendLine("            {");
-            sb.AppendLine("                \"string\" => \"test-value\",");
+            sb.AppendLine("                \"string\" => \"test-string-value\",");
             sb.AppendLine("                \"integer\" => 123,");
             sb.AppendLine("                \"number\" => 123.45,");
             sb.AppendLine("                \"boolean\" => true,");
-            sb.AppendLine("                \"array\" => new[] { \"test\" },");
+            sb.AppendLine("                \"array\" => new[] { \"test-item\" },");
             sb.AppendLine("                \"uuid\" => Guid.NewGuid().ToString(),");
             sb.AppendLine("                \"date\" => DateTime.Now.ToString(\"yyyy-MM-dd\"),");
             sb.AppendLine("                \"date-time\" => DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\"),");
-            sb.AppendLine("                _ => \"test-value\"");
+            sb.AppendLine("                _ => \"default-test-value\"");
             sb.AppendLine("            };");
             sb.AppendLine("        }");
             sb.AppendLine();
+            sb.AppendLine("        /// <summary>");
+            sb.AppendLine("        /// Generates a generic test request body for POST/PUT operations");
+            sb.AppendLine("        /// Override this method to provide endpoint-specific request bodies");
+            sb.AppendLine("        /// </summary>");
             sb.AppendLine("        private object GenerateTestRequestBody()");
             sb.AppendLine("        {");
-            sb.AppendLine("            return new { testProperty = \"testValue\", id = Guid.NewGuid() };");
+            sb.AppendLine("            return new { ");
+            sb.AppendLine("                testProperty = \"testValue\", ");
+            sb.AppendLine("                id = Guid.NewGuid().ToString(),");
+            sb.AppendLine("                timestamp = DateTime.UtcNow");
+            sb.AppendLine("            };");
             sb.AppendLine("        }");
             
             return sb.ToString();
