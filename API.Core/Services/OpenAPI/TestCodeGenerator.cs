@@ -170,23 +170,56 @@ namespace API.Core.Services.OpenAPI
         private static string GenerateSchemaFromResponse(OpenApiResponse response, OpenApiTestSpec spec, string schemaKey)
         {
             Console.WriteLine($"🔍 DEBUG: Generating schema from response for {schemaKey}...");
-            Console.WriteLine($"📋 Response content types: {string.Join(", ", response.Content?.Keys ?? Array.Empty<string>())}");
+            
+            // First, let's check what we actually have in the response
+            if (response.Content == null)
+            {
+                Console.WriteLine($"❌ Response.Content is NULL for {schemaKey}");
+                return CreateFallbackSchema("Response.Content is null");
+            }
+            
+            Console.WriteLine($"📋 Response content types: {string.Join(", ", response.Content.Keys)}");
+            Console.WriteLine($"📊 Content count: {response.Content.Count}");
             
             try
             {
-                if (response.Content == null || !response.Content.Any())
+                // Debug each content type
+                foreach (var contentType in response.Content)
+                {
+                    Console.WriteLine($"🔍 Content-Type: '{contentType.Key}'");
+                    Console.WriteLine($"   - MediaType is null: {contentType.Value == null}");
+                    if (contentType.Value != null)
+                    {
+                        Console.WriteLine($"   - Schema is null: {contentType.Value.Schema == null}");
+                        if (contentType.Value.Schema != null)
+                        {
+                            var schema = contentType.Value.Schema;
+                            Console.WriteLine($"   - Schema Type: '{schema.Type ?? "null"}'");
+                            Console.WriteLine($"   - Schema Properties: {schema.Properties?.Count ?? 0}");
+                            Console.WriteLine($"   - Schema Reference: '{schema.Reference?.Id ?? "null"}'");
+                            Console.WriteLine($"   - Schema Items: {schema.Items != null}");
+                        }
+                    }
+                }
+
+                if (!response.Content.Any())
                 {
                     Console.WriteLine($"❌ No content found in response");
                     return CreateFallbackSchema("No content in response");
                 }
 
-                // Try multiple JSON content type variations
+                // Try to find JSON content - be more flexible with content type matching
                 var jsonContent = response.Content.FirstOrDefault(c => 
-                    c.Key.Equals("application/json", StringComparison.OrdinalIgnoreCase) ||
                     c.Key.Contains("json", StringComparison.OrdinalIgnoreCase) ||
-                    c.Key.Contains("application/json", StringComparison.OrdinalIgnoreCase));
+                    c.Key.Contains("application/json", StringComparison.OrdinalIgnoreCase) ||
+                    c.Key.Equals("*/*", StringComparison.OrdinalIgnoreCase) ||
+                    c.Key.Equals("application/*", StringComparison.OrdinalIgnoreCase));
                 
                 Console.WriteLine($"🔍 JSON Content found: {jsonContent.Key != null}");
+                if (jsonContent.Key != null)
+                {
+                    Console.WriteLine($"🔍 Selected content-type: '{jsonContent.Key}'");
+                }
                 
                 if (jsonContent.Key == null)
                 {
@@ -197,14 +230,18 @@ namespace API.Core.Services.OpenAPI
                 var mediaType = jsonContent.Value;
                 if (mediaType?.Schema == null)
                 {
-                    Console.WriteLine($"❌ No schema found in media type");
+                    Console.WriteLine($"❌ No schema found in media type for content-type: {jsonContent.Key}");
                     return CreateFallbackSchema("No schema in media type");
                 }
 
                 var schema = mediaType.Schema;
-                Console.WriteLine($"✅ Schema found! Type: {schema.Type ?? "undefined"}");
+                Console.WriteLine($"✅ Schema found! Type: '{schema.Type ?? "undefined"}'");
                 Console.WriteLine($"📝 Properties count: {schema.Properties?.Count ?? 0}");
-                Console.WriteLine($"🔗 Reference: {schema.Reference?.Id ?? "none"}");
+                Console.WriteLine($"🔗 Reference: '{schema.Reference?.Id ?? "none"}'");
+                Console.WriteLine($"📦 Items: {schema.Items != null}");
+                Console.WriteLine($"🔢 AllOf count: {schema.AllOf?.Count ?? 0}");
+                Console.WriteLine($"🔢 OneOf count: {schema.OneOf?.Count ?? 0}");
+                Console.WriteLine($"🔢 AnyOf count: {schema.AnyOf?.Count ?? 0}");
                 
                 // Handle schema references
                 if (schema.Reference != null)
@@ -220,15 +257,13 @@ namespace API.Core.Services.OpenAPI
                 
                 var convertedSchema = ConvertOpenApiSchemaToJsonSchema(schema);
                 Console.WriteLine($"🎯 Generated schema length: {convertedSchema.Length} characters");
+                Console.WriteLine($"🎯 Generated schema preview: {convertedSchema.Substring(0, Math.Min(200, convertedSchema.Length))}...");
                 
                 // Validate that we have a meaningful schema
-                if (convertedSchema.Contains("\"type\"") && 
-                    (convertedSchema.Contains("\"properties\"") || 
-                     convertedSchema.Contains("\"items\"") || 
-                     schema.Type == "string" || 
-                     schema.Type == "number" || 
-                     schema.Type == "integer" || 
-                     schema.Type == "boolean"))
+                var hasRealSchema = HasMeaningfulSchema(schema, convertedSchema);
+                Console.WriteLine($"🔍 Has meaningful schema: {hasRealSchema}");
+                
+                if (hasRealSchema)
                 {
                     Console.WriteLine($"✅ Real schema generated successfully");
                     return convertedSchema;
@@ -244,6 +279,49 @@ namespace API.Core.Services.OpenAPI
                 Console.WriteLine($"❌ Error generating schema: {ex.Message}");
                 return CreateFallbackSchema($"Error: {ex.Message}");
             }
+        }
+        
+        private static bool HasMeaningfulSchema(OpenApiSchema schema, string convertedSchema)
+        {
+            // Check if schema has meaningful content
+            if (schema == null) return false;
+            
+            // Check for explicit types
+            if (!string.IsNullOrEmpty(schema.Type) && 
+                (schema.Type == "string" || schema.Type == "number" || 
+                 schema.Type == "integer" || schema.Type == "boolean"))
+            {
+                return true;
+            }
+            
+            // Check for object with properties
+            if (schema.Properties?.Any() == true)
+            {
+                return true;
+            }
+            
+            // Check for array with items
+            if (schema.Items != null)
+            {
+                return true;
+            }
+            
+            // Check for composition schemas
+            if (schema.AllOf?.Any() == true || schema.OneOf?.Any() == true || schema.AnyOf?.Any() == true)
+            {
+                return true;
+            }
+            
+            // Check if converted schema has meaningful content
+            if (convertedSchema.Contains("\"properties\"") || 
+                convertedSchema.Contains("\"items\"") ||
+                (convertedSchema.Contains("\"type\"") && 
+                 !convertedSchema.Contains("\"description\": \"Fallback")))
+            {
+                return true;
+            }
+            
+            return false;
         }
         
         private static OpenApiSchema? ResolveSchemaReference(OpenApiReference reference, OpenApiTestSpec spec)
@@ -271,7 +349,12 @@ namespace API.Core.Services.OpenAPI
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error resolving schema reference: {ex.Message}");
+                var availableSchemas = spec.Document.Components.Schemas.Keys.ToList();
+                Console.WriteLine($"📋 Available schemas ({availableSchemas.Count}): {string.Join(", ", availableSchemas.Take(10))}");
+                if (availableSchemas.Count > 10)
+                {
+                    Console.WriteLine($"    ... and {availableSchemas.Count - 10} more");
+                }
                 return null;
             }
         }
@@ -288,6 +371,11 @@ namespace API.Core.Services.OpenAPI
 
         private static string ConvertOpenApiSchemaToJsonSchema(OpenApiSchema openApiSchema)
         {
+            Console.WriteLine($"🔄 Converting OpenAPI schema to JSON schema...");
+            Console.WriteLine($"   - Input Type: '{openApiSchema.Type ?? "null"}'");
+            Console.WriteLine($"   - Input Properties: {openApiSchema.Properties?.Count ?? 0}");
+            Console.WriteLine($"   - Input Items: {openApiSchema.Items != null}");
+            
             try
             {
                 var schema = new Dictionary<string, object>();
@@ -397,14 +485,18 @@ namespace API.Core.Services.OpenAPI
                 // Set additional properties
                 schema["additionalProperties"] = openApiSchema.AdditionalPropertiesAllowed;
                 
-                return JsonSerializer.Serialize(schema, new JsonSerializerOptions 
+                var result = JsonSerializer.Serialize(schema, new JsonSerializerOptions 
                 { 
                     WriteIndented = true 
                 });
+                
+                Console.WriteLine($"✅ Conversion successful. Result length: {result.Length}");
+                return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️  Error converting OpenAPI schema: {ex.Message}");
+                Console.WriteLine($"❌ Error converting OpenAPI schema: {ex.Message}");
+                Console.WriteLine($"   Stack trace: {ex.StackTrace}");
                 return @"{
                     ""type"": ""object"",
                     ""additionalProperties"": true,
