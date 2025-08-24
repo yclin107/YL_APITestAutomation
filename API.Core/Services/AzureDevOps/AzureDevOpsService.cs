@@ -2,6 +2,7 @@ using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
+using Microsoft.TeamFoundation.Core.WebApi;
 using API.Core.Models.AzureDevOps;
 using API.Core.Models;
 using System.Text.Json;
@@ -485,13 +486,13 @@ namespace API.Core.Services.AzureDevOps
 
             // Test 1: Get project info
             Console.Write("1. Testing project access... ");
-            var projectClient = _witClient.VssConnection.GetClient<Microsoft.TeamFoundation.Core.WebApi.ProjectHttpClient>();
+            var projectClient = _witClient.VssConnection.GetClient<ProjectHttpClient>();
             var project = await projectClient.GetProject(_config.ProjectName);
             Console.WriteLine($"✅ Project found: {project.Name}");
 
             // Test 2: Test work item queries
             Console.Write("2. Testing work item access... ");
-            var wiql = new Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models.Wiql()
+            var wiql = new Wiql()
             {
                 Query = $"SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{_config.ProjectName}' ORDER BY [System.Id] DESC"
             };
@@ -502,7 +503,6 @@ namespace API.Core.Services.AzureDevOps
             Console.Write("3. Testing area path... ");
             try
             {
-                var classificationClient = _witClient.VssConnection.GetClient<Microsoft.TeamFoundation.WorkItemTracking.WebApi.WorkItemTrackingHttpClient>();
                 // Just validate the format, don't fail if area doesn't exist
                 if (string.IsNullOrEmpty(_config.AreaPath) || !_config.AreaPath.Contains(_config.ProjectName))
                 {
