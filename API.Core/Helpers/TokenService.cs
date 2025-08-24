@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using static RestAssured.Dsl;
 using TokenCache = API.Core.Models.Token.TokenCache;
+using API.Core.Helpers;
 
 namespace API.Core.Helpers
 {
@@ -78,7 +79,7 @@ namespace API.Core.Helpers
         }
         
         private static async Task<TenantProfile?> GetProfileFromEnvironment(ProfileManager profileManager)
-        {
+            var profileManager = new ProfileManager();
             var profilePath = Environment.GetEnvironmentVariable("TEST_PROFILE");
             var masterPassword = Environment.GetEnvironmentVariable("MASTER_PASSWORD");
             
