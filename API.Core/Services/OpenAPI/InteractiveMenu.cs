@@ -41,7 +41,6 @@ namespace API.Core.Services.OpenAPI
                         await HandleProfileManagement();
                         break;
                     case "5":
-                        Console.WriteLine("Goodbye!");
                         return;
                     default:
                         Console.WriteLine("Invalid option. Press any key to continue...");

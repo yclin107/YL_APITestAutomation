@@ -1,7 +1,7 @@
 using Allure.Net.Commons;
 using Allure.NUnit;
 using Allure.NUnit.Attributes;
-using API.TestBase.Services;
+using API.Core.Services;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;

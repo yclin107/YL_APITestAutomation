@@ -44,7 +44,6 @@ namespace API.Core.Services.OpenAPI
                         await HandleProfileManagement();
                         break;
                     case 4: // Exit
-                        Console.WriteLine("Goodbye!");
                         return;
                 }
             }
