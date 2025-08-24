@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using API.Core.Helpers;
+using API.Core.Services.AzureDevOps;
 
 namespace API.Core.Services.OpenAPI
 {
@@ -7,11 +8,13 @@ namespace API.Core.Services.OpenAPI
     {
         private readonly OpenApiTestManager _manager;
         private readonly ProfileManager _profileManager;
+        private readonly AzureDevOpsService _azureDevOpsService;
 
         public InteractiveMenuWithArrows()
         {
             _manager = new OpenApiTestManager();
             _profileManager = new ProfileManager();
+            _azureDevOpsService = new AzureDevOpsService();
         }
 
         public async Task ShowMenuAsync()
@@ -23,7 +26,8 @@ namespace API.Core.Services.OpenAPI
                     "🧪 Run Tests",
                     "📊 Generate Allure Report", 
                     "🤖 Auto Generate Tests",
-                    "👤 Profile Management"
+                    "👤 Profile Management",
+                    "🔗 Azure DevOps Integration"
                 };
 
                 var choice = ShowMenuWithArrows("Elite Test Generator - API Test Automation", mainOptions);
@@ -44,6 +48,9 @@ namespace API.Core.Services.OpenAPI
                         break;
                     case 3: // Profile Management
                         await HandleProfileManagement();
+                        break;
+                    case 4: // Azure DevOps Integration
+                        await HandleAzureDevOpsIntegration();
                         break;
                 }
             }
