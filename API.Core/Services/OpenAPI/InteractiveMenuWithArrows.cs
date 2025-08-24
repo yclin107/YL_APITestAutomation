@@ -596,7 +596,11 @@ pause > nul";
             Console.WriteLine("=== Configure Azure DevOps Settings ===");
             Console.WriteLine();
             
-            var configPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "devops-config.json");
+            // Point to the API.TestBase project's Config folder
+            var currentDir = AppContext.BaseDirectory;
+            var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
+            var configPath = Path.Combine(solutionRoot, "API.TestBase", "Config", "AzureDevOps", "devops-config.json");
+            configPath = Path.GetFullPath(configPath);
             
             Console.WriteLine($"📁 Configuration file: {configPath}");
             Console.WriteLine();

@@ -21,7 +21,12 @@ namespace API.Core.Services.AzureDevOps
 
         public AzureDevOpsService()
         {
-            _configPath = Path.Combine(AppContext.BaseDirectory, "Config", "AzureDevOps", "devops-config.json");
+            // Point to the API.TestBase project's Config folder
+            var currentDir = AppContext.BaseDirectory;
+            var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
+            _configPath = Path.Combine(solutionRoot, "API.TestBase", "Config", "AzureDevOps", "devops-config.json");
+            _configPath = Path.GetFullPath(_configPath);
+            
             _config = LoadConfiguration();
             
             _connection = new VssConnection(new Uri(_config.OrganizationUrl), new VssBasicCredential(string.Empty, _config.PersonalAccessToken));
@@ -408,24 +413,43 @@ namespace API.Core.Services.AzureDevOps
 
         private AzureDevOpsConfig LoadConfiguration()
         {
+            Console.WriteLine($"📂 Loading Azure DevOps configuration from: {_configPath}");
+            
             if (!File.Exists(_configPath))
             {
+                Console.WriteLine("❌ Configuration file not found. Creating default configuration...");
                 CreateDefaultConfiguration();
+                Console.WriteLine($"✅ Default configuration created at: {_configPath}");
+                Console.WriteLine("🔧 Please update the configuration with your Azure DevOps details and try again.");
+                Console.WriteLine();
             }
 
             var json = File.ReadAllText(_configPath);
-            return JsonSerializer.Deserialize<AzureDevOpsConfig>(json) ?? new AzureDevOpsConfig();
+            var config = JsonSerializer.Deserialize<AzureDevOpsConfig>(json) ?? new AzureDevOpsConfig();
+            
+            Console.WriteLine($"✅ Configuration loaded successfully:");
+            Console.WriteLine($"   📋 Organization: {config.OrganizationUrl}");
+            Console.WriteLine($"   📁 Project: {config.ProjectName}");
+            Console.WriteLine($"   🔑 PAT: {(string.IsNullOrEmpty(config.PersonalAccessToken) || config.PersonalAccessToken == "YOUR_PAT_TOKEN_HERE" ? "❌ NOT CONFIGURED" : "✅ Configured")}");
+            Console.WriteLine();
+            
+            return config;
         }
 
         private void CreateDefaultConfiguration()
         {
+            Console.WriteLine($"📁 Creating default configuration at: {_configPath}");
+            Console.WriteLine("⚠️  Please update this file with your Azure DevOps details:");
+            Console.WriteLine($"   Organization URL, Project Name, Personal Access Token, etc.");
+            Console.WriteLine();
+            
             var defaultConfig = new AzureDevOpsConfig
             {
-                OrganizationUrl = "https://dev.azure.com/YourOrganization",
-                ProjectName = "YourProject",
+                OrganizationUrl = "https://dev.azure.com/tr-legal-3E",
+                ProjectName = "3EProject",
                 PersonalAccessToken = "YOUR_PAT_TOKEN_HERE",
-                AreaPath = "YourProject\\API Tests",
-                IterationPath = "YourProject",
+                AreaPath = "3EProject\\API Tests",
+                IterationPath = "3EProject",
                 StoryTemplate = new WorkItemTemplate
                 {
                     WorkItemType = "User Story",
