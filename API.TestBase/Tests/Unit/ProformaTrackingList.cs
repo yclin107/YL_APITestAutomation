@@ -84,9 +84,9 @@ namespace API.TestBase.Tests.Unit
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(proformaTrackingListResponse?.Summary.ToString(), Is.Not.Empty, "Summary is empty");
-                    Assert.That(proformaTrackingListResponse?.ListResponse.ToString(), Is.Not.Empty, "ListResponse is empty");
-                    Assert.That(proformaTrackingListResponse?.ListFilter.ToString(), Is.Not.Empty, "ListFilter is empty");
+                    Assert.That(proformaTrackingListResponse?.Summary?.ToString(), Is.Not.Empty, "Summary is empty");
+                    Assert.That(proformaTrackingListResponse?.ListResponse?.ToString(), Is.Not.Empty, "ListResponse is empty");
+                    Assert.That(proformaTrackingListResponse?.ListFilter?.ToString(), Is.Not.Empty, "ListFilter is empty");
                 });
             });
 
@@ -94,11 +94,11 @@ namespace API.TestBase.Tests.Unit
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(proformaTrackingListResponse?.Summary.Completed, Is.GreaterThanOrEqualTo(0), "Completed proformas are 0");
-                    Assert.That(proformaTrackingListResponse?.Summary.Incomplete, Is.GreaterThanOrEqualTo(0), "Incomplete proformas are empty");
-                    Assert.That(proformaTrackingListResponse?.Summary.NotStarted, Is.GreaterThanOrEqualTo(0), "NotStarted proformas are empty");
-                    Assert.That(proformaTrackingListResponse?.Summary.TimekeeperName, Does.Contain(context.User.FirstName), $"User name doesn't contains {context.User.FirstName}");
-                    Assert.That(proformaTrackingListResponse?.Summary.TimekeeperNumber, Is.EqualTo(context.User.DefaultTimekeeperNumber), "TimekeeperNumber doesn't match");
+                    Assert.That(proformaTrackingListResponse?.Summary?.Completed, Is.GreaterThanOrEqualTo(0), "Completed proformas are 0");
+                    Assert.That(proformaTrackingListResponse?.Summary?.Incomplete, Is.GreaterThanOrEqualTo(0), "Incomplete proformas are empty");
+                    Assert.That(proformaTrackingListResponse?.Summary?.NotStarted, Is.GreaterThanOrEqualTo(0), "NotStarted proformas are empty");
+                    Assert.That(proformaTrackingListResponse?.Summary?.TimekeeperName, Does.Contain(context.User.FirstName), $"User name doesn't contains {context.User.FirstName}");
+                    Assert.That(proformaTrackingListResponse?.Summary?.TimekeeperNumber, Is.EqualTo(context.User.DefaultTimekeeperNumber), "TimekeeperNumber doesn't match");
                 });
             });
 
@@ -106,8 +106,8 @@ namespace API.TestBase.Tests.Unit
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(proformaTrackingListResponse?.ListResponse.TotalRowCount, Is.GreaterThan(0), "TotalRowCount is O");
-                    Assert.That(proformaTrackingListResponse?.ListResponse.Proformas.Count, Is.GreaterThan(0), "Proformas list is empty");
+                    Assert.That(proformaTrackingListResponse?.ListResponse?.TotalRowCount, Is.GreaterThan(0), "TotalRowCount is O");
+                    Assert.That(proformaTrackingListResponse?.ListResponse?.Proformas?.Count, Is.GreaterThan(0), "Proformas list is empty");
                 });
             });
 
@@ -115,12 +115,12 @@ namespace API.TestBase.Tests.Unit
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(proformaTrackingListResponse?.ListFilter.Matters.Count, Is.GreaterThan(0), "Matters list is empty");
-                    Assert.That(proformaTrackingListResponse?.ListFilter.MatterNumbers.Count, Is.GreaterThan(0), "Matter numbers list is empty");
-                    Assert.That(proformaTrackingListResponse?.ListFilter.Clients.Count, Is.GreaterThan(0), "Clients list is empty");
-                    Assert.That(proformaTrackingListResponse?.ListFilter.ClientNumbers.Count, Is.GreaterThan(0), "Clients number list is empty");
-                    Assert.That(proformaTrackingListResponse?.ListFilter.Timekeepers.Count, Is.EqualTo(1), "Timekeepers list is  different from response");
-                    Assert.That(proformaTrackingListResponse?.ListFilter.TimekeeperNumbers.Count, Is.EqualTo(1), "Timekeepers numbers is different from response");
+                    Assert.That(proformaTrackingListResponse?.ListFilter?.Matters?.Count, Is.GreaterThan(0), "Matters list is empty");
+                    Assert.That(proformaTrackingListResponse?.ListFilter?.MatterNumbers?.Count, Is.GreaterThan(0), "Matter numbers list is empty");
+                    Assert.That(proformaTrackingListResponse?.ListFilter?.Clients?.Count, Is.GreaterThan(0), "Clients list is empty");
+                    Assert.That(proformaTrackingListResponse?.ListFilter?.ClientNumbers?.Count, Is.GreaterThan(0), "Clients number list is empty");
+                    Assert.That(proformaTrackingListResponse?.ListFilter?.Timekeepers?.Count, Is.EqualTo(1), "Timekeepers list is  different from response");
+                    Assert.That(proformaTrackingListResponse?.ListFilter?.TimekeeperNumbers?.Count, Is.EqualTo(1), "Timekeepers numbers is different from response");
                 });
             });
 
@@ -231,9 +231,9 @@ namespace API.TestBase.Tests.Unit
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(ppProformaTrackingListResponse?.Summary.ToString(), Is.Not.Empty, "Summary is empty");
-                    Assert.That(ppProformaTrackingListResponse?.ListResponse.ToString(), Is.Not.Empty, "ListResponse is empty");
-                    Assert.That(ppProformaTrackingListResponse?.ListFilter.ToString(), Is.Not.Empty, "ListFilter is empty");
+                    Assert.That(ppProformaTrackingListResponse?.Summary?.ToString(), Is.Not.Empty, "Summary is empty");
+                    Assert.That(ppProformaTrackingListResponse?.ListResponse?.ToString(), Is.Not.Empty, "ListResponse is empty");
+                    Assert.That(ppProformaTrackingListResponse?.ListFilter?.ToString(), Is.Not.Empty, "ListFilter is empty");
                 });
             });
 
@@ -241,10 +241,10 @@ namespace API.TestBase.Tests.Unit
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(ppProformaTrackingListResponse?.Summary.Completed, Is.GreaterThanOrEqualTo(0), "Completed proformas are 0");
-                    Assert.That(ppProformaTrackingListResponse?.Summary.Incomplete, Is.GreaterThanOrEqualTo(0), "Incomplete proformas are empty");
-                    Assert.That(ppProformaTrackingListResponse?.Summary.NotStarted, Is.GreaterThanOrEqualTo(0), "NotStarted proformas are empty");
-                    Assert.That(ppProformaTrackingListResponse?.Summary.ClientName, Does.Contain(randomProformaListItem.Client), $"Client name doesn't contains {randomProformaListItem.Client}");
+                    Assert.That(ppProformaTrackingListResponse?.Summary?.Completed, Is.GreaterThanOrEqualTo(0), "Completed proformas are 0");
+                    Assert.That(ppProformaTrackingListResponse?.Summary?.Incomplete, Is.GreaterThanOrEqualTo(0), "Incomplete proformas are empty");
+                    Assert.That(ppProformaTrackingListResponse?.Summary?.NotStarted, Is.GreaterThanOrEqualTo(0), "NotStarted proformas are empty");
+                    Assert.That(ppProformaTrackingListResponse?.Summary?.ClientName, Does.Contain(randomProformaListItem.Client), $"Client name doesn't contains {randomProformaListItem.Client}");
                 });
             });
 
@@ -261,12 +261,12 @@ namespace API.TestBase.Tests.Unit
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(ppProformaTrackingListResponse?.ListFilter.Matters, Is.Not.Empty, "Matters list is empty");
-                    Assert.That(ppProformaTrackingListResponse?.ListFilter.MatterNumbers.Count, Is.GreaterThan(0), "Matter numbers list is empty");
-                    Assert.That(ppProformaTrackingListResponse?.ListFilter.Clients.Count, Is.EqualTo(1), "Clients is different than single client filter");
-                    Assert.That(ppProformaTrackingListResponse?.ListFilter.ClientNumbers.Count, Is.EqualTo(1), "Clients is different than single client filter");
-                    Assert.That(ppProformaTrackingListResponse?.ListFilter.Timekeepers.Count, Is.GreaterThan(0), "Timekeepers list is empty");
-                    Assert.That(ppProformaTrackingListResponse?.ListFilter.TimekeeperNumbers.Count, Is.GreaterThan(0), "Timekeepers numbers list is empty");
+                    Assert.That(ppProformaTrackingListResponse?.ListFilter?.Matters, Is.Not.Empty, "Matters list is empty");
+                    Assert.That(ppProformaTrackingListResponse?.ListFilter?.MatterNumbers?.Count, Is.GreaterThan(0), "Matter numbers list is empty");
+                    Assert.That(ppProformaTrackingListResponse?.ListFilter?.Clients?.Count, Is.EqualTo(1), "Clients is different than single client filter");
+                    Assert.That(ppProformaTrackingListResponse?.ListFilter?.ClientNumbers?.Count, Is.EqualTo(1), "Clients is different than single client filter");
+                    Assert.That(ppProformaTrackingListResponse?.ListFilter?.Timekeepers?.Count, Is.GreaterThan(0), "Timekeepers list is empty");
+                    Assert.That(ppProformaTrackingListResponse?.ListFilter?.TimekeeperNumbers?.Count, Is.GreaterThan(0), "Timekeepers numbers list is empty");
                 });
             });
 

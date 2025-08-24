@@ -15,21 +15,21 @@ namespace API.TestBase.Models.ProformaModels
         public int NotStarted { get; set; }
 
         [JsonProperty("matterName", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public string MatterName { get; set; }
+        public string? MatterName { get; set; }
 
         [JsonProperty("matterNumber", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public string MatterNumber { get; set; }
+        public string? MatterNumber { get; set; }
 
         [JsonProperty("clientName", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public string ClientName { get; set; }
+        public string? ClientName { get; set; }
 
         [JsonProperty("clientNumber", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public string ClientNumber { get; set; }
+        public string? ClientNumber { get; set; }
 
         [JsonProperty("timekeeperName", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public string TimekeeperName { get; set; }
+        public string? TimekeeperName { get; set; }
 
         [JsonProperty("timekeeperNumber", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public string TimekeeperNumber { get; set; }
+        public string? TimekeeperNumber { get; set; }
     }
 }

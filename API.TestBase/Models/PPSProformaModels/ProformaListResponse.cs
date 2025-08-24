@@ -8,6 +8,6 @@ namespace API.TestBase.Models.ProformaModels
         public int TotalRowCount { get; set; }
 
         [JsonProperty("proformas", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
-        public ICollection<ProformaInfo> Proformas { get; set; }
+        public ICollection<ProformaInfo>? Proformas { get; set; }
     }
 }
