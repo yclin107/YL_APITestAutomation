@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Collections.Concurrent;
 using API.Core.Helpers;
+using System.Diagnostics;
 
 namespace API.TestBase
 {
@@ -16,8 +17,12 @@ namespace API.TestBase
     {
         private static readonly ProfileManager _profileManager = new();
         private static readonly ConcurrentDictionary<int, TestContext> _threadContexts = new();
+        private static readonly ConcurrentDictionary<string, UserProfile> _assignedUsers = new();
         private static TenantProfile? _currentProfile;
         private static readonly object _profileLock = new object();
+        private static List<UserProfile>? _availableUsers;
+        private static int _userIndex = 0;
+        private static readonly object _userAssignmentLock = new object();
 
         [OneTimeSetUp]
         [AllureBefore]
@@ -48,6 +53,10 @@ namespace API.TestBase
                     {
                         throw new InvalidOperationException($"Profile '{profilePath}' not found. Available profiles: {string.Join(", ", _profileManager.GetAvailableProfilesAsync().Result)}");
                     }
+                    
+                    // Initialize available users for parallel execution
+                    _availableUsers = _currentProfile.Users.Values.ToList();
+                    Console.WriteLine($"🔧 Initialized {_availableUsers.Count} users for parallel execution");
                 }
                 catch (Exception ex)
                 {
@@ -62,16 +71,30 @@ namespace API.TestBase
         protected TestContext GetTestContext()
         {
             var threadId = Thread.CurrentThread.ManagedThreadId;
+            var processId = Process.GetCurrentProcess().Id;
+            var uniqueKey = $"{processId}_{threadId}";
             
             return _threadContexts.GetOrAdd(threadId, _ =>
             {
                 if (_currentProfile == null)
                     throw new InvalidOperationException("No profile loaded");
 
-                var user = _profileManager.GetRandomUser(_currentProfile);
+                // Assign users in round-robin fashion for true parallel execution
+                UserProfile user;
+                lock (_userAssignmentLock)
+                {
+                    if (_availableUsers == null || !_availableUsers.Any())
+                        throw new InvalidOperationException("No users available");
+                    
+                    user = _availableUsers[_userIndex % _availableUsers.Count];
+                    _userIndex++;
+                    
+                    // Track user assignment to avoid conflicts
+                    _assignedUsers[uniqueKey] = user;
+                }
                 
                 // Log which user is being used for this thread
-                Console.WriteLine($"🧵 Thread {threadId}: Using user {user.LoginId}");
+                Console.WriteLine($"🧵 Process {processId} Thread {threadId}: Using user {user.LoginId}");
                 
                 return new TestContext
                 {

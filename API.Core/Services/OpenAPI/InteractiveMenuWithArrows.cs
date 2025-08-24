@@ -205,16 +205,46 @@ pause > nul";
         {
             Console.WriteLine($"🚀 Starting {threads} parallel test threads...");
             Console.WriteLine($"📊 Each thread will save results to: {allureResultsPath}");
+            Console.WriteLine($"👥 Each thread will use a different user from the profile");
             Console.WriteLine();
 
             var processes = new List<Process>();
+            
+            // Load profile to check available users
+            try
+            {
+                var parts = selectedProfile.Split('/');
+                var profileManager = new ProfileManager();
+                var masterPassword = Environment.GetEnvironmentVariable("MASTER_PASSWORD");
+                var profile = await profileManager.LoadProfileAsync(parts[0], parts[1], parts[2], masterPassword);
+                
+                if (profile == null)
+                {
+                    Console.WriteLine("❌ Could not load profile for user validation");
+                    return;
+                }
+                
+                var availableUsers = profile.Users.Values.ToList();
+                Console.WriteLine($"👥 Profile has {availableUsers.Count} users available");
+                
+                if (threads > availableUsers.Count)
+                {
+                    Console.WriteLine($"⚠️  Warning: {threads} threads requested but only {availableUsers.Count} users available");
+                    Console.WriteLine($"   Users will be reused in round-robin fashion");
+                }
+                
+                Console.WriteLine();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Could not validate users: {ex.Message}");
+            }
 
             for (int i = 1; i <= threads; i++)
             {
-                // Create unique filter for each thread to avoid conflicts
+                // Each process will get a different user via round-robin assignment
                 var threadFilter = string.IsNullOrEmpty(filter) ? "" : filter;
                 
-                // Add thread-specific identifier to avoid Allure conflicts
                 var threadId = $"Thread{i}";
                 
                 var batchContent = $@"@echo off
@@ -222,11 +252,12 @@ cd /d ""{GetSolutionRoot()}""
 set TEST_PROFILE={selectedProfile}
 set ALLURE_RESULTS_DIRECTORY={allureResultsPath}
 title API Tests - {threadId}
-echo 🧵 {threadId}: Running tests with profile: {selectedProfile}
+echo 🧵 {threadId}: Running tests with profile: {selectedProfile} 
 echo 📊 {threadId}: Results will be saved to: {allureResultsPath}
 echo ⚡ {threadId}: Thread {i} of {threads}
+echo 👤 {threadId}: User will be assigned automatically via round-robin
 echo.
-dotnet test "" --parallel{(string.IsNullOrEmpty(threadFilter) ? "" : $" --filter \"{threadFilter}\"")}
+dotnet test API.TestBase --logger ""allure;LogLevel=trace"" --maxcpucount:1 --parallel{(string.IsNullOrEmpty(threadFilter) ? "" : $" --filter \"{threadFilter}\"")}
 echo.
 echo ✅ {threadId}: Tests completed! Press any key to close...
 pause > nul";
@@ -251,12 +282,13 @@ pause > nul";
                 Console.WriteLine($"🧵 Thread {i}: Terminal opened");
                 
                 // Small delay between starting threads to avoid conflicts
-                await Task.Delay(1000);
+                await Task.Delay(2000); // Increased delay for better user assignment
             }
 
             Console.WriteLine();
             Console.WriteLine($"✅ All {threads} test threads started!");
-            Console.WriteLine("Each thread is running in its own terminal window.");
+            Console.WriteLine("Each thread is running in its own terminal window with different users.");
+            Console.WriteLine("Check each terminal to see which user is assigned to each thread.");
         }
 
         private async Task HandleGenerateReport()
