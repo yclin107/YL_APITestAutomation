@@ -93,8 +93,6 @@ namespace API.Core.Services.OpenAPI
         {
             var endpointInfo = ExtractEndpointFromSchemaKey(schemaKey);
             
-            var endpointInfo = ExtractEndpointFromSchemaKey(schemaKey);
-            
             sb.AppendLine($"        private async Task ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
             sb.AppendLine("            // Add response as Allure attachment for viewing");
