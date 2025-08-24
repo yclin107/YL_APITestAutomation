@@ -1,6 +1,7 @@
 using API.Core.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.OpenApi.Models;
 
 namespace API.Core.Services.OpenAPI
 {
