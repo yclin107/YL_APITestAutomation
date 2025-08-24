@@ -299,27 +299,27 @@ namespace API.Core.Services.OpenAPI
             {
                 if (spec.Document?.Components?.Schemas == null)
                 {
-                    Console.WriteLine($"            ❌ No components/schemas in document");
+                    Console.WriteLine($"               ❌ No components/schemas in document");
                     return null;
                 }
                 
                 var schemaName = reference.Id;
                 if (spec.Document.Components.Schemas.TryGetValue(schemaName, out var referencedSchema))
                 {
-                    Console.WriteLine($"            ✅ Found referenced schema: {schemaName}");
+                    Console.WriteLine($"               ✅ Found referenced schema: {schemaName}");
                     return referencedSchema;
                 }
                 else
                 {
-                    Console.WriteLine($"            ❌ Schema '{schemaName}' not found");
+                    Console.WriteLine($"               ❌ Schema '{schemaName}' not found");
                     var availableSchemas = spec.Document.Components.Schemas.Keys.Take(5).ToList();
-                    Console.WriteLine($"            📋 Available: {string.Join(", ", availableSchemas)}{(spec.Document.Components.Schemas.Keys.Count > 5 ? "..." : "")}");
+                    Console.WriteLine($"               📋 Available: {string.Join(", ", availableSchemas)}{(spec.Document.Components.Schemas.Keys.Count > 5 ? "..." : "")}");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"            ❌ Error resolving reference: {ex.Message}");
+                Console.WriteLine($"               ❌ Error resolving reference: {ex.Message}");
                 return null;
             }
         }
