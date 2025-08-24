@@ -23,11 +23,13 @@ namespace API.Core.Services.OpenAPI
                     "🧪 Run Tests",
                     "📊 Generate Allure Report", 
                     "🤖 Auto Generate Tests",
-                    "👤 Profile Management",
-                    "🚪 Exit"
+                    "👤 Profile Management"
                 };
 
                 var choice = ShowMenuWithArrows("Elite Test Generator - API Test Automation", mainOptions);
+
+                if (choice == -1) // Esc pressed on main menu
+                    return;
 
                 switch (choice)
                 {
@@ -43,8 +45,6 @@ namespace API.Core.Services.OpenAPI
                     case 3: // Profile Management
                         await HandleProfileManagement();
                         break;
-                    case 4: // Exit
-                        return;
                 }
             }
         }
@@ -81,7 +81,7 @@ namespace API.Core.Services.OpenAPI
                 }
 
                 Console.WriteLine();
-                Console.WriteLine("Use ↑↓ arrows to navigate, Enter to select");
+                Console.WriteLine("Use ↑↓ arrows to navigate, Enter to select, Esc to go back");
 
                 key = Console.ReadKey(true).Key;
 
@@ -93,8 +93,10 @@ namespace API.Core.Services.OpenAPI
                     case ConsoleKey.DownArrow:
                         selectedIndex = selectedIndex == options.Length - 1 ? 0 : selectedIndex + 1;
                         break;
+                    case ConsoleKey.Escape:
+                        return -1; // Indicate back/exit
                 }
-            } while (key != ConsoleKey.Enter);
+            } while (key != ConsoleKey.Enter && key != ConsoleKey.Escape);
 
             return selectedIndex;
         }
@@ -115,6 +117,8 @@ namespace API.Core.Services.OpenAPI
             }
 
             var selectedProfileIndex = ShowMenuWithArrows("Select Profile", profiles.ToArray());
+            if (selectedProfileIndex == -1) return; // Esc pressed
+            
             var selectedProfile = profiles[selectedProfileIndex];
             
             Console.Clear();
@@ -125,16 +129,35 @@ namespace API.Core.Services.OpenAPI
             Console.Write("Enter test filter (optional, e.g., Category=Generated): ");
             var filter = Console.ReadLine()?.Trim();
 
+            // Clean allure-results before running tests
+            var allureResultsPath = Path.Combine(GetSolutionRoot(), "allure-results");
+            if (Directory.Exists(allureResultsPath))
+            {
+                Console.WriteLine("🧹 Cleaning previous test results...");
+                Directory.Delete(allureResultsPath, true);
+                Directory.CreateDirectory(allureResultsPath);
+            }
+
             try
             {
+                var arguments = $"test --logger \"allure;LogLevel=trace\"";
+                
+                if (threads > 1)
+                {
+                    arguments += $" --maxcpucount:{threads}";
+                }
+                
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    arguments += $" --filter \"{filter}\"";
+                }
+
                 var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "dotnet",
-                        Arguments = $"test --logger \"allure;LogLevel=trace\"" + 
-                                   (threads > 1 ? $" --maxcpucount:{threads}" : "") +
-                                   (string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\""),
+                        Arguments = arguments,
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
@@ -146,23 +169,41 @@ namespace API.Core.Services.OpenAPI
                 
                 Console.WriteLine($"🚀 Running tests with profile: {selectedProfile}");
                 if (threads > 1) Console.WriteLine($"⚡ Parallel threads: {threads}");
+                Console.WriteLine($"📊 Results will be saved to: {allureResultsPath}");
                 Console.WriteLine();
 
                 process.Start();
                 
-                var output = await process.StandardOutput.ReadToEndAsync();
-                var error = await process.StandardError.ReadToEndAsync();
-                
-                await process.WaitForExitAsync();
-
-                Console.WriteLine(output);
-                if (!string.IsNullOrEmpty(error))
+                // Show real-time output
+                var outputTask = Task.Run(async () =>
                 {
-                    Console.WriteLine("Errors:");
-                    Console.WriteLine(error);
-                }
+                    string? line;
+                    while ((line = await process.StandardOutput.ReadLineAsync()) != null)
+                    {
+                        Console.WriteLine(line);
+                    }
+                });
+
+                var errorTask = Task.Run(async () =>
+                {
+                    string? line;
+                    while ((line = await process.StandardError.ReadLineAsync()) != null)
+                    {
+                        Console.WriteLine($"ERROR: {line}");
+                    }
+                });
+
+                await process.WaitForExitAsync();
+                await Task.WhenAll(outputTask, errorTask);
 
                 Console.WriteLine($"✅ Tests completed with exit code: {process.ExitCode}");
+                
+                // Show results summary
+                if (Directory.Exists(allureResultsPath))
+                {
+                    var resultFiles = Directory.GetFiles(allureResultsPath, "*-result.json");
+                    Console.WriteLine($"📊 Generated {resultFiles.Length} test result files");
+                }
             }
             catch (Exception ex)
             {
@@ -223,13 +264,15 @@ namespace API.Core.Services.OpenAPI
                 "🚀 Generate Tests from OpenAPI Specification",
                 "🔍 Detect Changes in Specification",
                 "👁️ Preview Tests (without generating)",
-                "📁 Show Available Specification Files",
-                "🔙 Back to Main Menu"
+                "📁 Show Available Specification Files"
             };
 
             while (true)
             {
                 var choice = ShowMenuWithArrows("Auto Generate Tests", options);
+
+                if (choice == -1) // Esc pressed
+                    return;
 
                 switch (choice)
                 {
@@ -245,8 +288,6 @@ namespace API.Core.Services.OpenAPI
                     case 3:
                         ShowSpecificationFiles();
                         break;
-                    case 4:
-                        return;
                 }
             }
         }
@@ -257,13 +298,15 @@ namespace API.Core.Services.OpenAPI
             {
                 "📋 Show Available Profiles",
                 "🔒 Encrypt All Profiles", 
-                "🔓 Decrypt All Profiles",
-                "🔙 Back to Main Menu"
+                "🔓 Decrypt All Profiles"
             };
 
             while (true)
             {
                 var choice = ShowMenuWithArrows("Profile Management", options);
+
+                if (choice == -1) // Esc pressed
+                    return;
 
                 switch (choice)
                 {
@@ -276,8 +319,6 @@ namespace API.Core.Services.OpenAPI
                     case 2:
                         await DecryptProfiles();
                         break;
-                    case 3:
-                        return;
                 }
             }
         }
@@ -591,6 +632,8 @@ namespace API.Core.Services.OpenAPI
 
             var fileNames = files.Select(Path.GetFileName).ToArray();
             var selectedIndex = ShowMenuWithArrows("Select Specification File", fileNames);
+            
+            if (selectedIndex == -1) return string.Empty; // Esc pressed
             
             return files[selectedIndex];
         }

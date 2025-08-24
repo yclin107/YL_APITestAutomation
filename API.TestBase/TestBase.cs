@@ -23,7 +23,8 @@ namespace API.TestBase
         [AllureBefore]
         public static void CleanupResultDirectory()
         {
-            AllureLifecycle.Instance.CleanupResultDirectory();
+            // Don't clean up automatically - let the menu handle it
+            // AllureLifecycle.Instance.CleanupResultDirectory();
             InitializeTestProfile();
         }
 
@@ -68,6 +69,10 @@ namespace API.TestBase
                     throw new InvalidOperationException("No profile loaded");
 
                 var user = _profileManager.GetRandomUser(_currentProfile);
+                
+                // Log which user is being used for this thread
+                Console.WriteLine($"🧵 Thread {threadId}: Using user {user.LoginId}");
+                
                 return new TestContext
                 {
                     TenantId = _currentProfile.TenantId,
