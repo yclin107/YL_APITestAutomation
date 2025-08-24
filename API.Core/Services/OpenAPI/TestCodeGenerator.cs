@@ -3,6 +3,7 @@ using System.Text;
 using System.Net;
 using API.Core.Models;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using NJsonSchema;
 
 namespace API.Core.Services.OpenAPI
