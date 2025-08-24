@@ -15,8 +15,8 @@ namespace API.Core.Services.AzureDevOps
     public class AzureDevOpsService
     {
         private readonly AzureDevOpsConfig _config;
-        private readonly VssConnection _connection;
-        private readonly WorkItemTrackingHttpClient _witClient;
+        private VssConnection? _connection;
+        private WorkItemTrackingHttpClient? _witClient;
         private readonly string _configPath;
 
         public AzureDevOpsService()
@@ -26,15 +26,21 @@ namespace API.Core.Services.AzureDevOps
             var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
             _configPath = Path.Combine(solutionRoot, "API.TestBase", "Config", "AzureDevOps", "devops-config.json");
             _configPath = Path.GetFullPath(_configPath);
-            
-            _config = LoadConfiguration();
-            
-            _connection = new VssConnection(new Uri(_config.OrganizationUrl), new VssBasicCredential(string.Empty, _config.PersonalAccessToken));
-            _witClient = _connection.GetClient<WorkItemTrackingHttpClient>();
+        }
+
+        private void EnsureInitialized()
+        {
+            if (_connection == null || _witClient == null)
+            {
+                _config = LoadConfiguration();
+                _connection = new VssConnection(new Uri(_config.OrganizationUrl), new VssBasicCredential(string.Empty, _config.PersonalAccessToken));
+                _witClient = _connection.GetClient<WorkItemTrackingHttpClient>();
+            }
         }
 
         public async Task<WorkItemSyncResult> SyncOpenApiSpecAsync(OpenApiTestSpec spec)
         {
+            EnsureInitialized();
             var result = new WorkItemSyncResult();
             
             try
@@ -413,36 +419,18 @@ namespace API.Core.Services.AzureDevOps
 
         private AzureDevOpsConfig LoadConfiguration()
         {
-            Console.WriteLine($"📂 Loading Azure DevOps configuration from: {_configPath}");
-            
             if (!File.Exists(_configPath))
             {
-                Console.WriteLine("❌ Configuration file not found. Creating default configuration...");
                 CreateDefaultConfiguration();
-                Console.WriteLine($"✅ Default configuration created at: {_configPath}");
-                Console.WriteLine("🔧 Please update the configuration with your Azure DevOps details and try again.");
-                Console.WriteLine();
             }
 
             var json = File.ReadAllText(_configPath);
             var config = JsonSerializer.Deserialize<AzureDevOpsConfig>(json) ?? new AzureDevOpsConfig();
-            
-            Console.WriteLine($"✅ Configuration loaded successfully:");
-            Console.WriteLine($"   📋 Organization: {config.OrganizationUrl}");
-            Console.WriteLine($"   📁 Project: {config.ProjectName}");
-            Console.WriteLine($"   🔑 PAT: {(string.IsNullOrEmpty(config.PersonalAccessToken) || config.PersonalAccessToken == "YOUR_PAT_TOKEN_HERE" ? "❌ NOT CONFIGURED" : "✅ Configured")}");
-            Console.WriteLine();
-            
             return config;
         }
 
         private void CreateDefaultConfiguration()
         {
-            Console.WriteLine($"📁 Creating default configuration at: {_configPath}");
-            Console.WriteLine("⚠️  Please update this file with your Azure DevOps details:");
-            Console.WriteLine($"   Organization URL, Project Name, Personal Access Token, etc.");
-            Console.WriteLine();
-            
             var defaultConfig = new AzureDevOpsConfig
             {
                 OrganizationUrl = "https://dev.azure.com/tr-legal-3E",
@@ -477,9 +465,6 @@ namespace API.Core.Services.AzureDevOps
             Directory.CreateDirectory(Path.GetDirectoryName(_configPath)!);
             var json = JsonSerializer.Serialize(defaultConfig, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_configPath, json);
-
-            Console.WriteLine($"📝 Created default Azure DevOps configuration at: {_configPath}");
-            Console.WriteLine("Please update the configuration with your Azure DevOps details.");
         }
 
         private void PrintSyncSummary(WorkItemSyncResult result)
@@ -501,6 +486,7 @@ namespace API.Core.Services.AzureDevOps
 
         public async Task<bool> TestConnectionAsync()
         {
+            EnsureInitialized();
             try
             {
                 Console.WriteLine("🔌 Testing Azure DevOps connection...");

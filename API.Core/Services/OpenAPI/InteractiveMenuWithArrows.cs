@@ -724,6 +724,10 @@ pause > nul";
             Console.WriteLine("=== Test Azure DevOps Connection ===");
             Console.WriteLine();
             
+            Console.WriteLine("📂 Loading Azure DevOps configuration...");
+            Console.WriteLine($"📁 Config file: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "API.TestBase", "Config", "AzureDevOps", "devops-config.json"))}");
+            Console.WriteLine();
+            
             try
             {
                 var connectionResult = await _azureDevOpsService.TestConnectionAsync();
