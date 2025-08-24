@@ -151,36 +151,16 @@ namespace API.Core.Services.OpenAPI
                     arguments += $" --filter \"{filter}\"";
                 }
 
-                // Create batch file for the command
-                var batchContent = $@"@echo off
-cd /d ""{GetSolutionRoot()}""
-set TEST_PROFILE={selectedProfile}
-echo 🚀 Running tests with profile: {selectedProfile}
-{(threads > 1 ? $"echo ⚡ Parallel threads: {threads}" : "")}
-echo 📊 Results will be saved to: {allureResultsPath}
-echo.
-dotnet {arguments}
-echo.
-echo ✅ Tests completed! Press any key to close...
-pause > nul";
-
-                var batchPath = Path.Combine(Path.GetTempPath(), "run_tests.bat");
-                await File.WriteAllTextAsync(batchPath, batchContent);
-
-                var process = new Process()
+                if (threads == 1)
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "cmd",
-                        Arguments = $"/c start \"API Tests\" cmd /k \"{batchPath}\"",
-                        UseShellExecute = true,
-                        CreateNoWindow = false
-                    }
-                };
-
-                process.Start();
-                Console.WriteLine("🚀 Opening tests in new terminal window...");
-                Console.WriteLine("The tests will run in a separate window.");
+                    // Single thread execution
+                    await RunSingleThreadTests(selectedProfile, filter, allureResultsPath);
+                }
+                else
+                {
+                    // Multi-thread execution - run each thread in separate terminal
+                    await RunMultiThreadTests(selectedProfile, filter, threads, allureResultsPath);
+                }
             }
             catch (Exception ex)
             {
@@ -188,6 +168,95 @@ pause > nul";
             }
 
             PauseForUser();
+        }
+
+        private async Task RunSingleThreadTests(string selectedProfile, string filter, string allureResultsPath)
+        {
+            var batchContent = $@"@echo off
+cd /d ""{GetSolutionRoot()}""
+set TEST_PROFILE={selectedProfile}
+echo 🚀 Running tests with profile: {selectedProfile}
+echo 📊 Results will be saved to: {allureResultsPath}
+echo.
+dotnet test API.TestBase --logger ""allure;LogLevel=trace""{(string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\"")}
+echo.
+echo ✅ Tests completed! Press any key to close...
+pause > nul";
+
+            var batchPath = Path.Combine(Path.GetTempPath(), "run_tests_single.bat");
+            await File.WriteAllTextAsync(batchPath, batchContent);
+
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd",
+                    Arguments = $"/c start \"API Tests - Single Thread\" cmd /k \"{batchPath}\"",
+                    UseShellExecute = true,
+                    CreateNoWindow = false
+                }
+            };
+
+            process.Start();
+            Console.WriteLine("🚀 Opening tests in new terminal window...");
+        }
+
+        private async Task RunMultiThreadTests(string selectedProfile, string filter, int threads, string allureResultsPath)
+        {
+            Console.WriteLine($"🚀 Starting {threads} parallel test threads...");
+            Console.WriteLine($"📊 Each thread will save results to: {allureResultsPath}");
+            Console.WriteLine();
+
+            var processes = new List<Process>();
+
+            for (int i = 1; i <= threads; i++)
+            {
+                // Create unique filter for each thread to avoid conflicts
+                var threadFilter = string.IsNullOrEmpty(filter) ? "" : filter;
+                
+                // Add thread-specific identifier to avoid Allure conflicts
+                var threadId = $"Thread{i}";
+                
+                var batchContent = $@"@echo off
+cd /d ""{GetSolutionRoot()}""
+set TEST_PROFILE={selectedProfile}
+set ALLURE_RESULTS_DIRECTORY={allureResultsPath}
+title API Tests - {threadId}
+echo 🧵 {threadId}: Running tests with profile: {selectedProfile}
+echo 📊 {threadId}: Results will be saved to: {allureResultsPath}
+echo ⚡ {threadId}: Thread {i} of {threads}
+echo.
+dotnet test API.TestBase --logger ""allure;LogLevel=trace"" --parallel{(string.IsNullOrEmpty(threadFilter) ? "" : $" --filter \"{threadFilter}\"")}
+echo.
+echo ✅ {threadId}: Tests completed! Press any key to close...
+pause > nul";
+
+                var batchPath = Path.Combine(Path.GetTempPath(), $"run_tests_thread_{i}.bat");
+                await File.WriteAllTextAsync(batchPath, batchContent);
+
+                var process = new Process()
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "cmd",
+                        Arguments = $"/c start \"API Tests - Thread {i}\" cmd /k \"{batchPath}\"",
+                        UseShellExecute = true,
+                        CreateNoWindow = false
+                    }
+                };
+
+                process.Start();
+                processes.Add(process);
+                
+                Console.WriteLine($"🧵 Thread {i}: Terminal opened");
+                
+                // Small delay between starting threads to avoid conflicts
+                await Task.Delay(1000);
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"✅ All {threads} test threads started!");
+            Console.WriteLine("Each thread is running in its own terminal window.");
         }
 
         private async Task HandleGenerateReport()

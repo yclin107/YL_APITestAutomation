@@ -23,8 +23,8 @@ namespace API.TestBase
         [AllureBefore]
         public static void CleanupResultDirectory()
         {
-            // Don't clean up automatically - let the menu handle it
-            // AllureLifecycle.Instance.CleanupResultDirectory();
+            // Don't clean up automatically in parallel execution
+            // The menu handles cleanup before starting tests
             InitializeTestProfile();
         }
 
