@@ -550,7 +550,7 @@ namespace API.Core.Services.OpenAPI
         {
             var currentDir = AppContext.BaseDirectory;
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            var specificationsPath = Path.Combine(projectRoot, "APITestAutomation", "Specifications");
+            var specificationsPath = Path.Combine(projectRoot, "API.TestBase", "Config", "OpenAPI");
             return Path.GetFullPath(specificationsPath);
         }
 
@@ -558,7 +558,7 @@ namespace API.Core.Services.OpenAPI
         {
             var currentDir = AppContext.BaseDirectory;
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            var testProjectPath = Path.Combine(projectRoot, "APITestAutomationTest");
+            var testProjectPath = Path.Combine(projectRoot, "API.TestBase");
             return Path.GetFullPath(testProjectPath);
         }
 

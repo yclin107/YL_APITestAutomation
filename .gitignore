@@ -372,3 +372,6 @@ FodyWeavers.xsd
 
 # Reports
 allure-results
+
+# Profile source files (contains credentials)
+API.TestBase/Config/Profiles/Source/
