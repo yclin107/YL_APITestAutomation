@@ -234,33 +234,33 @@ namespace API.Core.Services.OpenAPI
                     return CreateFallbackSchema("No schema in media type");
                 }
 
-                var schema = mediaType.Schema;
-                Console.WriteLine($"✅ Schema found! Type: '{schema.Type ?? "undefined"}'");
-                Console.WriteLine($"📝 Properties count: {schema.Properties?.Count ?? 0}");
-                Console.WriteLine($"🔗 Reference: '{schema.Reference?.Id ?? "none"}'");
-                Console.WriteLine($"📦 Items: {schema.Items != null}");
-                Console.WriteLine($"🔢 AllOf count: {schema.AllOf?.Count ?? 0}");
-                Console.WriteLine($"🔢 OneOf count: {schema.OneOf?.Count ?? 0}");
-                Console.WriteLine($"🔢 AnyOf count: {schema.AnyOf?.Count ?? 0}");
+                var openApiSchema = mediaType.Schema;
+                Console.WriteLine($"✅ Schema found! Type: '{openApiSchema.Type ?? "undefined"}'");
+                Console.WriteLine($"📝 Properties count: {openApiSchema.Properties?.Count ?? 0}");
+                Console.WriteLine($"🔗 Reference: '{openApiSchema.Reference?.Id ?? "none"}'");
+                Console.WriteLine($"📦 Items: {openApiSchema.Items != null}");
+                Console.WriteLine($"🔢 AllOf count: {openApiSchema.AllOf?.Count ?? 0}");
+                Console.WriteLine($"🔢 OneOf count: {openApiSchema.OneOf?.Count ?? 0}");
+                Console.WriteLine($"🔢 AnyOf count: {openApiSchema.AnyOf?.Count ?? 0}");
                 
                 // Handle schema references
-                if (schema.Reference != null)
+                if (openApiSchema.Reference != null)
                 {
-                    Console.WriteLine($"🔗 Resolving schema reference: {schema.Reference.Id}");
-                    var resolvedSchema = ResolveSchemaReference(schema.Reference, spec);
+                    Console.WriteLine($"🔗 Resolving schema reference: {openApiSchema.Reference.Id}");
+                    var resolvedSchema = ResolveSchemaReference(openApiSchema.Reference, spec);
                     if (resolvedSchema != null)
                     {
-                        schema = resolvedSchema;
-                        Console.WriteLine($"✅ Reference resolved! Type: {schema.Type ?? "undefined"}");
+                        openApiSchema = resolvedSchema;
+                        Console.WriteLine($"✅ Reference resolved! Type: {openApiSchema.Type ?? "undefined"}");
                     }
                 }
                 
-                var convertedSchema = ConvertOpenApiSchemaToJsonSchema(schema);
+                var convertedSchema = ConvertOpenApiSchemaToJsonSchema(openApiSchema);
                 Console.WriteLine($"🎯 Generated schema length: {convertedSchema.Length} characters");
                 Console.WriteLine($"🎯 Generated schema preview: {convertedSchema.Substring(0, Math.Min(200, convertedSchema.Length))}...");
                 
                 // Validate that we have a meaningful schema
-                var hasRealSchema = HasMeaningfulSchema(schema, convertedSchema);
+                var hasRealSchema = HasMeaningfulSchema(openApiSchema, convertedSchema);
                 Console.WriteLine($"🔍 Has meaningful schema: {hasRealSchema}");
                 
                 if (hasRealSchema)
