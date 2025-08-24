@@ -7,6 +7,8 @@ namespace API.Core.Services.OpenAPI
 {
     public class TestCodeGenerator
     {
+        private static readonly SchemaValidator _schemaValidator = new();
+
         public static string GenerateTestClassByTag(OpenApiTestSpec spec, List<OpenApiEndpointTest> endpoints, string tenant, string userId, string className, string tag)
         {
             var sb = new StringBuilder();
@@ -24,6 +26,8 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine("using static RestAssured.Dsl;");
             sb.AppendLine("using Newtonsoft.Json.Schema;");
             sb.AppendLine("using Newtonsoft.Json.Linq;");
+            sb.AppendLine("using NJsonSchema;");
+            sb.AppendLine("using NJsonSchema.Validation;");
             sb.AppendLine();
 
             // Generate namespace and class following the existing pattern
@@ -38,10 +42,13 @@ namespace API.Core.Services.OpenAPI
             // Generate test methods for each endpoint
             foreach (var endpoint in endpoints)
             {
-                GenerateEndpointTestsWithAllurePattern(sb, endpoint, spec, sanitizedTag, true); // Always generate unauthorized tests
+                GenerateEndpointTestsWithAllurePattern(sb, endpoint, spec, sanitizedTag, true);
             }
 
-            // Add helper methods
+            // Generate schema validation methods
+            GenerateSchemaValidationMethods(sb, endpoints, spec);
+            
+            // Add helper methods  
             sb.AppendLine(GenerateHelperMethods());
             
             sb.AppendLine("    }");
@@ -357,12 +364,14 @@ namespace API.Core.Services.OpenAPI
             
             sb.AppendLine("            AllureApi.Step(\"Validate response schema\", () =>");
             sb.AppendLine("            {");
-            sb.AppendLine("                Assert.Multiple(() =>");
+            sb.AppendLine("                if (response.Extract().Response().IsSuccessStatusCode)");
             sb.AppendLine("                {");
-            sb.AppendLine("                    Assert.That(string.IsNullOrEmpty(rawJson), Is.False, \"Response should not be empty\");");
-            sb.AppendLine("                    Assert.That(response.Extract().Response().IsSuccessStatusCode, Is.True, \"Request should be successful for schema validation\");");
-            sb.AppendLine("                    // TODO: Add specific schema validation based on OpenAPI spec");
-            sb.AppendLine("                });");
+            sb.AppendLine($"                    ValidateResponseSchema_{SanitizeIdentifier(endpoint.Method + "_" + endpoint.Path)}(rawJson);");
+            sb.AppendLine("                }");
+            sb.AppendLine("                else");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    Assert.That(string.IsNullOrEmpty(rawJson), Is.False, \"Response should not be empty even for error responses\");");
+            sb.AppendLine("                }");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
