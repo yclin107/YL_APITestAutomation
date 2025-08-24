@@ -16,7 +16,7 @@ namespace API.Core.Services.OpenAPI
             _configPath = Path.Combine(AppContext.BaseDirectory, configPath);
 
             var solutionRoot = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..");
-            _testsPath = Path.Combine(solutionRoot, "APITestAutomationTest", "Generated");
+            _testsPath = Path.Combine(solutionRoot, "API.TestBase", "Tests", "Generated");
             _reportsPath = Path.Combine(AppContext.BaseDirectory, reportsPath);
             _protectionManager = new TestProtectionManager();
             

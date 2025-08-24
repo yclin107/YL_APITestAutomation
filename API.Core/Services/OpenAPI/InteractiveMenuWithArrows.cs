@@ -110,7 +110,7 @@ namespace API.Core.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("❌ No profiles found. Please create a profile first.");
-                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomationTest", "Profiles"))}");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "API.TestBase", "Config", "Profiles"))}");
                 PauseForUser();
                 return;
             }
@@ -293,7 +293,7 @@ namespace API.Core.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("No profiles found.");
-                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomationTest", "Profiles"))}");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "API.TestBase", "Config", "Profiles"))}");
             }
             else
             {
@@ -550,7 +550,7 @@ namespace API.Core.Services.OpenAPI
         {
             var currentDir = AppContext.BaseDirectory;
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            var specificationsPath = Path.Combine(projectRoot, "APITestAutomation", "Specifications");
+            var specificationsPath = Path.Combine(projectRoot, "API.TestBase", "Config", "OpenAPI");
             return Path.GetFullPath(specificationsPath);
         }
 
@@ -558,7 +558,7 @@ namespace API.Core.Services.OpenAPI
         {
             var currentDir = AppContext.BaseDirectory;
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            var testProjectPath = Path.Combine(projectRoot, "APITestAutomationTest");
+            var testProjectPath = Path.Combine(projectRoot, "API.TestBase");
             return Path.GetFullPath(testProjectPath);
         }
 

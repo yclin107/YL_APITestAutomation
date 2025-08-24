@@ -18,7 +18,7 @@ namespace API.Core.Services.OpenAPI
             // Generate using statements following the existing pattern
             sb.AppendLine("using Allure.Net.Commons;");
             sb.AppendLine("using Allure.NUnit.Attributes;");
-            sb.AppendLine("using APITestAutomation.Helpers;");
+            sb.AppendLine("using API.Core.Helpers;");
             sb.AppendLine("using System.Net;");
             sb.AppendLine("using System.Text.Json;");
             sb.AppendLine("using static RestAssured.Dsl;");
@@ -27,7 +27,7 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine();
 
             // Generate namespace and class following the existing pattern
-            sb.AppendLine($"namespace APITestAutomationTest.Generated.{sanitizedTag}");
+            sb.AppendLine($"namespace API.TestBase.Tests.Generated.{sanitizedTag}");
             sb.AppendLine("{");
             sb.AppendLine("    [TestFixture]");
             sb.AppendLine($"    [AllureFeature(\"{sanitizedTag} API Tests\")]");
