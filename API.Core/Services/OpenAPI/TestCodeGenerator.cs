@@ -89,11 +89,22 @@ namespace API.Core.Services.OpenAPI
 
         private static void GenerateSchemaValidationMethod(StringBuilder sb, string methodName, string schemaKey, OpenApiResponse response, OpenApiTestSpec spec)
         {
+            var endpointInfo = ExtractEndpointFromSchemaKey(schemaKey);
+            
             sb.AppendLine($"        private async Task ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
             
             // Generate schema JSON from OpenAPI response
-            var schemaJson = GenerateSchemaFromResponse(response, spec, schemaKey);
+            string schemaJson;
+            try
+            {
+                schemaJson = GenerateSchemaFromResponse(response, spec, schemaKey);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Memory error generating schema for {endpointInfo}: {ex.Message}");
+                schemaJson = CreateFallbackSchema("Memory allocation error - schema too large", endpointInfo);
+            }
             
             var isRealSchema = !schemaJson.Contains("\"description\": \"Generic response schema\"") && 
                               !schemaJson.Contains("\"description\": \"Fallback response schema\"");
@@ -103,7 +114,7 @@ namespace API.Core.Services.OpenAPI
                 // Generate real schema validation
                 sb.AppendLine("            try");
                 sb.AppendLine("            {");
-                sb.AppendLine($"                var schemaJson = @\"{EscapeJsonForString(schemaJson)}\";");
+                sb.AppendLine($"                var schemaJson = @\"{FormatJsonForCSharp(schemaJson)}\";");
                 sb.AppendLine("                var schema = await NJsonSchema.JsonSchema.FromJsonAsync(schemaJson);");
                 sb.AppendLine("                var validator = new JsonSchemaValidator();");
                 sb.AppendLine("                var errors = validator.Validate(jsonResponse, schema);");
@@ -116,8 +127,8 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("                }");
                 sb.AppendLine("                else");
                 sb.AppendLine("                {");
-                sb.AppendLine($"                    Console.WriteLine(\"✅ Schema validation passed for {methodName}\");");
-                if (schemaJson.Contains("too complex") || schemaJson.Contains("Simplified schema"))
+                sb.AppendLine($"                    Console.WriteLine(\"✅ Schema validation passed for {endpointInfo}\");");
+                if (schemaJson.Contains("too complex") || schemaJson.Contains("Simplified schema") || schemaJson.Contains("Memory allocation error"))
                 {
                     sb.AppendLine("                    // NOTE: Schema was simplified due to complexity - consider manual validation for critical fields");
                 }
@@ -132,12 +143,12 @@ namespace API.Core.Services.OpenAPI
             {
                 // Generate basic validation as fallback
                 sb.AppendLine("            // Basic validation - ensure response is valid JSON");
-                sb.AppendLine("            // No schema found in OpenAPI specification for this endpoint");
+                sb.AppendLine($"            // NOTE: Schema was simplified due to complexity for {endpointInfo}");
                 sb.AppendLine("            try");
                 sb.AppendLine("            {");
                 sb.AppendLine("                JsonDocument.Parse(jsonResponse);");
                 sb.AppendLine("                Assert.That(string.IsNullOrEmpty(jsonResponse), Is.False, \"Response should not be empty\");");
-                sb.AppendLine($"                Console.WriteLine(\"⚠️  Basic validation only for {methodName} - no schema in OpenAPI spec\");");
+                sb.AppendLine($"                Console.WriteLine(\"⚠️  Basic validation only for {endpointInfo} - schema was simplified\");");
                 sb.AppendLine("            }");
                 sb.AppendLine("            catch (JsonException ex)");
                 sb.AppendLine("            {");
@@ -169,16 +180,18 @@ namespace API.Core.Services.OpenAPI
 
         private static string GenerateSchemaFromResponse(OpenApiResponse response, OpenApiTestSpec spec, string schemaKey)
         {
+            var endpointInfo = ExtractEndpointFromSchemaKey(schemaKey);
+            
             if (response == null)
             {
-                return CreateFallbackSchema("Response is null");
+                return CreateFallbackSchema("Response is null", endpointInfo);
             }
             
             try
             {
                 if (response.Content == null || !response.Content.Any())
                 {
-                    return CreateFallbackSchema("No content in response");
+                    return CreateFallbackSchema("No content in response", endpointInfo);
                 }
 
                 // Try multiple JSON content type variations
@@ -189,13 +202,13 @@ namespace API.Core.Services.OpenAPI
                 
                 if (jsonContent.Key == null)
                 {
-                    return CreateFallbackSchema("No JSON content type");
+                    return CreateFallbackSchema("No JSON content type", endpointInfo);
                 }
                 
                 var mediaType = jsonContent.Value;
                 if (mediaType?.Schema == null)
                 {
-                    return CreateFallbackSchema("No schema in media type");
+                    return CreateFallbackSchema("No schema in media type", endpointInfo);
                 }
 
                 var schema = mediaType.Schema;
@@ -225,12 +238,13 @@ namespace API.Core.Services.OpenAPI
                 }
                 else
                 {
-                    return CreateFallbackSchema("Schema validation failed");
+                    return CreateFallbackSchema("Schema validation failed", endpointInfo);
                 }
             }
             catch (Exception ex)
             {
-                return CreateFallbackSchema($"Error: {ex.Message}");
+                Console.WriteLine($"⚠️  Memory error processing endpoint {endpointInfo}: {ex.Message}");
+                return CreateFallbackSchema($"Memory allocation error - schema too large", endpointInfo);
             }
         }
         
@@ -259,24 +273,48 @@ namespace API.Core.Services.OpenAPI
             }
         }
         
-        private static string CreateFallbackSchema(string reason)
+        private static string CreateFallbackSchema(string reason, string endpointInfo = "")
         {
-            return @"{
-                ""type"": ""object"",
-                ""additionalProperties"": true,
-                ""description"": ""Fallback response schema - " + reason.Replace("\"", "\\\"") + @"""
-            }";
+            var schema = new
+            {
+                type = "object",
+                additionalProperties = true,
+                description = $"Fallback response schema - {reason}",
+                _note = !string.IsNullOrEmpty(endpointInfo) ? $"Endpoint: {endpointInfo}" : null
+            };
+            
+            return JsonSerializer.Serialize(schema, new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+        }
+        
+        private static string ExtractEndpointFromSchemaKey(string schemaKey)
+        {
+            try
+            {
+                var parts = schemaKey.Split(':');
+                return parts.Length >= 2 ? $"{parts[0]} {parts[1]}" : schemaKey;
+            }
+            catch
+            {
+                return schemaKey;
+            }
         }
 
         private static string ConvertOpenApiSchemaToJsonSchema(OpenApiSchema openApiSchema, string schemaKey)
         {
+            var endpointInfo = ExtractEndpointFromSchemaKey(schemaKey);
+            
             try
             {
                 // Check if schema is too complex (might cause memory issues)
                 var complexityScore = CalculateSchemaComplexity(openApiSchema);
                 if (complexityScore > 1000)
                 {
-                    return CreateSimplifiedSchema(openApiSchema, schemaKey);
+                    Console.WriteLine($"⚠️  Simplifying complex schema for endpoint {endpointInfo} (complexity: {complexityScore})");
+                    return CreateSimplifiedSchema(openApiSchema, schemaKey, endpointInfo);
                 }
                 
                 var schema = new Dictionary<string, object>();
@@ -393,11 +431,8 @@ namespace API.Core.Services.OpenAPI
             }
             catch (Exception ex)
             {
-                return @"{
-                    ""type"": ""object"",
-                    ""additionalProperties"": true,
-                    ""description"": ""Fallback schema due to conversion error""
-                }";
+                Console.WriteLine($"⚠️  Schema conversion error for endpoint {endpointInfo}: {ex.Message}");
+                return CreateFallbackSchema($"Conversion error: {ex.Message}", endpointInfo);
             }
         }
         
@@ -422,22 +457,23 @@ namespace API.Core.Services.OpenAPI
             return complexity;
         }
         
-        private static string CreateSimplifiedSchema(OpenApiSchema openApiSchema, string schemaKey)
+        private static string CreateSimplifiedSchema(OpenApiSchema openApiSchema, string schemaKey, string endpointInfo)
         {
-            var simplified = new Dictionary<string, object>
+            var simplified = new
             {
-                ["type"] = openApiSchema.Type ?? "object",
-                ["additionalProperties"] = true,
-                ["description"] = $"Simplified schema for {schemaKey} - original was too complex for detailed validation"
+                type = openApiSchema.Type ?? "object",
+                additionalProperties = true,
+                description = $"Simplified schema for {endpointInfo} - original was too complex for detailed validation",
+                _note = openApiSchema.Properties?.Any() == true ? 
+                    $"Original schema had {openApiSchema.Properties.Count} properties - simplified for performance" : 
+                    "Schema was simplified due to complexity"
             };
             
-            // Add just the basic type info
-            if (openApiSchema.Properties?.Any() == true)
-            {
-                simplified["_note"] = $"Original schema had {openApiSchema.Properties.Count} properties - simplified for performance";
-            }
-            
-            return JsonSerializer.Serialize(simplified, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(simplified, new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
         }
         
         private static string ConvertOpenApiTypeToJsonSchemaType(string openApiType)
@@ -454,12 +490,26 @@ namespace API.Core.Services.OpenAPI
             };
         }
 
-        private static string EscapeJsonForString(string json)
+        private static string FormatJsonForCSharp(string json)
         {
-            return json.Replace("\\", "\\\\").Replace("\"", "\\\"")
-                      .Replace("\r", "")
-                      .Replace("\n", "\\n")
-                      .Replace("\t", "\\t");
+            // Clean and format JSON for C# verbatim string
+            try
+            {
+                // Parse and reformat to ensure valid JSON
+                var jsonDoc = JsonDocument.Parse(json);
+                var formattedJson = JsonSerializer.Serialize(jsonDoc, new JsonSerializerOptions 
+                { 
+                    WriteIndented = true 
+                });
+                
+                // Escape only quotes for verbatim string
+                return formattedJson.Replace("\"", "\"\"");
+            }
+            catch
+            {
+                // Fallback: just escape quotes
+                return json.Replace("\"", "\"\"");
+            }
         }
 
         private static void GenerateEndpointTestsWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec, string sanitizedTag, bool forceUnauthorizedTest = false)
