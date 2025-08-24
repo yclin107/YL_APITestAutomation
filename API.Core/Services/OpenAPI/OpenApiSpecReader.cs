@@ -95,10 +95,7 @@ namespace API.Core.Services.OpenAPI
                         }).ToList() ?? new List<OpenApiParameter>(),
                         Responses = operation.Value.Responses?.ToDictionary(
                             r => r.Key, 
-                            r => new OpenApiResponse 
-                            { 
-                                Description = r.Value.Description 
-                            }) ?? new Dictionary<string, OpenApiResponse>(),
+                            r => r.Value) ?? new Dictionary<string, OpenApiResponse>(),
                         RequestBody = operation.Value.RequestBody != null ? new OpenApiRequestBody
                         {
                             Required = operation.Value.RequestBody.Required,

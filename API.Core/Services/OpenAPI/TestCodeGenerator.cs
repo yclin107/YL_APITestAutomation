@@ -68,17 +68,23 @@ namespace API.Core.Services.OpenAPI
                 var methodName = SanitizeIdentifier(endpoint.Method + "_" + endpoint.Path);
                 var schemaKey = $"{endpoint.Method}:{endpoint.Path}";
                 
-                // Try to get schema from successful responses (200, 201, etc.)
-                var successResponse = endpoint.Responses.FirstOrDefault(r => 
-                    r.Key.StartsWith("2") && r.Value.Content?.Any() == true);
+                Console.WriteLine($"🔍 DEBUG: Processing endpoint {endpoint.Method} {endpoint.Path}");
+                Console.WriteLine($"📋 Available responses: {string.Join(", ", endpoint.Responses.Keys)}");
                 
-                if (successResponse.Value != null)
+                // Try to get schema from successful responses (200, 201, etc.)
+                var successResponse = endpoint.Responses.FirstOrDefault(r => r.Key.StartsWith("2"));
+                
+                Console.WriteLine($"🎯 Success response found: {successResponse.Key ?? "None"}");
+                
+                if (!string.IsNullOrEmpty(successResponse.Key) && successResponse.Value != null)
                 {
+                    Console.WriteLine($"✅ Generating schema validation for {successResponse.Key}");
                     GenerateSchemaValidationMethod(sb, methodName, schemaKey, successResponse.Value, spec);
                 }
                 else
                 {
                     // Generate a basic validation method if no schema is available
+                    Console.WriteLine($"⚠️  No success response found, generating basic validation");
                     GenerateBasicValidationMethod(sb, methodName);
                 }
             }
@@ -170,6 +176,13 @@ namespace API.Core.Services.OpenAPI
         private static string GenerateSchemaFromResponse(OpenApiResponse response, OpenApiTestSpec spec, string schemaKey)
         {
             Console.WriteLine($"🔍 DEBUG: Generating schema from response for {schemaKey}...");
+            
+            if (response == null)
+            {
+                Console.WriteLine($"❌ Response is null for {schemaKey}");
+                return CreateFallbackSchema("Response is null");
+            }
+            
             Console.WriteLine($"📋 Response content types: {string.Join(", ", response.Content?.Keys ?? Array.Empty<string>())}");
             
             try
