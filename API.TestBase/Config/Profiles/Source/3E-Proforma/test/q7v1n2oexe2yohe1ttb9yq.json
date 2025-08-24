@@ -1,0 +1,34 @@
+{
+  "AuthorizationEndpoint": "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize",
+  "ClientId": "c6f47024-bb8b-4cd5-8f8c-8cead2f2476f",
+  "Elite3EApiUrl": "https://3e.nonprod.elite.com/api/test/3e/ui/v1/instance/q7v1n2oexe2yohe1ttb9yq/",
+  "Elite3EClientId": "b1f2a07e-810a-4805-8108-67348c9dce76",
+  "OAuthScope": [
+    "https://management.core.windows.net/.default"
+  ],
+  "PPSClientId": "0780b432-ae27-4e54-afc4-880570abcebd",
+  "ProformaApiUrl": "https://proforma.nonprod.elite.com/api/test/3e/proforma/v1",
+  "RedirectUri": "http://localhost:8686/sampleapp/auth",
+  "TenantId": "b2c44778-9710-436c-a075-9bcc06e79a1b",
+  "TokenEndpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+  "Users": {
+    "PPSAutoTestUser0": {
+      "FirstName": "AutoTestUser0",
+      "LastName": "PPS",
+      "LoginId": "PPSAutoTestUser0@h3esharksdev01.onmicrosoft.com",
+      "Password": "PaperlessAutoTest0PWD0"
+    },
+    "PPSAutoTestUser1": {
+      "FirstName": "AutoTestUser1",
+      "LastName": "PPS",
+      "LoginId": "PPSAutoTestUser1@h3esharksdev01.onmicrosoft.com",
+      "Password": "AutoTestUser1"
+    },
+    "PPSAutoTestUser2": {
+      "FirstName": "AutoTestUser2",
+      "LastName": "PPS",
+      "LoginId": "PPSAutoTestUser2@h3esharksdev01.onmicrosoft.com",
+      "Password": "PaperlessAutoTest0PWD0"
+    }
+  }
+}

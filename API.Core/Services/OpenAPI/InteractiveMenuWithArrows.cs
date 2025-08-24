@@ -110,7 +110,7 @@ namespace API.Core.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("❌ No profiles found. Please create a profile first.");
-                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "API.TestBase", "Config", "Profiles"))}");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomationTest", "Profiles"))}");
                 PauseForUser();
                 return;
             }
@@ -293,7 +293,7 @@ namespace API.Core.Services.OpenAPI
             if (!profiles.Any())
             {
                 Console.WriteLine("No profiles found.");
-                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "API.TestBase", "Config", "Profiles"))}");
+                Console.WriteLine($"📁 Expected location: {Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "APITestAutomationTest", "Profiles"))}");
             }
             else
             {
@@ -550,7 +550,7 @@ namespace API.Core.Services.OpenAPI
         {
             var currentDir = AppContext.BaseDirectory;
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            var specificationsPath = Path.Combine(projectRoot, "API.TestBase", "Config", "OpenAPI");
+            var specificationsPath = Path.Combine(projectRoot, "APITestAutomation", "Specifications");
             return Path.GetFullPath(specificationsPath);
         }
 
@@ -558,7 +558,7 @@ namespace API.Core.Services.OpenAPI
         {
             var currentDir = AppContext.BaseDirectory;
             var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            var testProjectPath = Path.Combine(projectRoot, "API.TestBase");
+            var testProjectPath = Path.Combine(projectRoot, "APITestAutomationTest");
             return Path.GetFullPath(testProjectPath);
         }
 
@@ -567,14 +567,6 @@ namespace API.Core.Services.OpenAPI
             var currentDir = AppContext.BaseDirectory;
             var solutionRoot = Path.Combine(currentDir, "..", "..", "..", "..");
             return Path.GetFullPath(solutionRoot);
-        }
-
-        private string GetProfilesPath()
-        {
-            var currentDir = AppContext.BaseDirectory;
-            var projectRoot = Path.Combine(currentDir, "..", "..", "..", "..");
-            var profilesPath = Path.Combine(projectRoot, "API.TestBase", "Config", "Profiles");
-            return Path.GetFullPath(profilesPath);
         }
 
         private string GetSpecificationPath()
