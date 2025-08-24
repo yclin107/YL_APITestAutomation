@@ -13,6 +13,7 @@ namespace API.TestBase
 {
     [AllureNUnit]
     [TestFixture]
+    [Parallelizable(ParallelScope.All)]
     public class TestBase
     {
         private static readonly ProfileManager _profileManager = new();

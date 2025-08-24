@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <NUnit>
+    <!-- Number of worker threads to use for running tests -->
+    <NumberOfTestWorkers>4</NumberOfTestWorkers>
+    
+    <!-- Run tests in parallel -->
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+    
+    <!-- Domain usage for tests -->
+    <DomainUsage>Single</DomainUsage>
+    
+    <!-- Process model -->
+    <ProcessModel>Single</ProcessModel>
+    
+    <!-- Apartment state -->
+    <DefaultTestNamePattern>{m}{a}</DefaultTestNamePattern>
+  </NUnit>
+  
+  <TestRunParameters>
+    <!-- Custom parameters can be added here -->
+  </TestRunParameters>
+</RunSettings>
