@@ -316,7 +316,7 @@ namespace API.Core.Services.OpenAPI
             try
             {
                 await _profileManager.EncryptAllProfilesAsync(password);
-                Console.WriteLine("✅ All profiles encrypted successfully!");
+                //Console.WriteLine("✅ All profiles encrypted successfully!");
             }
             catch (Exception ex)
             {
@@ -339,7 +339,7 @@ namespace API.Core.Services.OpenAPI
             try
             {
                 await _profileManager.DecryptAllProfilesAsync(password);
-                Console.WriteLine("✅ All profiles decrypted successfully!");
+                //Console.WriteLine("✅ All profiles decrypted successfully!");
             }
             catch (Exception ex)
             {
