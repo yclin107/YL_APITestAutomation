@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace API.Core.Services
+namespace API.Core.Helpers
 {
     public class ProfileManager
     {

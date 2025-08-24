@@ -1,6 +1,6 @@
 using Microsoft.OpenApi.Models;
 
-namespace API.Core.Models.OpenAPI
+namespace API.Core.Models
 {
     public class OpenApiTestSpec
     {

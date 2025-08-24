@@ -9,7 +9,7 @@ namespace API.Core.Helpers
         private static readonly string ConfigPath = Path.Combine(AppContext.BaseDirectory, "Config", Env);
         private static Lazy<Dictionary<string, TenantConfig>> TenantConfigs = new(() => LoadTenantConfigs());
         private static Lazy<Dictionary<string, TenantUsers>> TenatUsers = new(() => LoadTenantUsers());
-               
+
         public static UserConfig GetUser(string tenant, string userId)
         {
             if (!TenatUsers.Value.TryGetValue(tenant, out var tenantUsers))
@@ -50,7 +50,7 @@ namespace API.Core.Helpers
             {
                 throw new Exception($"Tenant '{tenant}' not found in env '{Env}'");
             }
-          
+
             return new TenantConfig
             {
                 Elite3EClientId = tenatConfig.Elite3EClientId,
@@ -124,7 +124,7 @@ namespace API.Core.Helpers
             public string LoginId { get; set; } = string.Empty;
             public string FirstName { get; set; } = string.Empty;
             public string LastName { get; set; } = string.Empty;
-            public string PasswordEnvVar { get; set; } = string.Empty; 
+            public string PasswordEnvVar { get; set; } = string.Empty;
             public string TempPassword { get; set; } = string.Empty;
             public string DefaultTimekeeperIndex { get; set; } = string.Empty;
             public string DefaultTimekeeperNumber { get; set; } = string.Empty;
@@ -138,10 +138,9 @@ namespace API.Core.Helpers
             public string ProformaApiUrl { get; set; } = string.Empty;
             public string[] OAuthScope { get; set; } = [];
             public string TenantId { get; set; } = string.Empty;
-            public string AppId { get; set; } = string.Empty; 
+            public string AppId { get; set; } = string.Empty;
             public string RedirectUri { get; set; } = string.Empty;
             public string PPSScope { get; set; } = string.Empty;
-
         }
     }
 }

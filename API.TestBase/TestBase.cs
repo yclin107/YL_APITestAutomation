@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Collections.Concurrent;
+using API.Core.Helpers;
 
 namespace API.TestBase
 {
@@ -84,7 +85,7 @@ namespace API.TestBase
 
         protected string GetAuthToken(TestContext context)
         {
-            return API.Core.Authentications.TokenService.PPSProformaToken(
+            return TokenService.PPSProformaToken(
                 context.TenantId, 
                 new API.Core.Helpers.ConfigSetup.UserConfig
                 {

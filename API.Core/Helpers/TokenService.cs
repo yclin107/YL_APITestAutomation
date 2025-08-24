@@ -1,18 +1,18 @@
-using API.Core.Helpers;
+using API.Core.Models.Token;
 using Microsoft.Identity.Client;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using static RestAssured.Dsl;
+using TokenCache = API.Core.Models.Token.TokenCache;
 
-
-namespace API.Core.Authentications
+namespace API.Core.Helpers
 {
     public static class TokenService
     {
         public static async Task<string> GetROPCToken(string tenant, ConfigSetup.UserConfig user)
         {
-            var key = APITestAutomation.Helpers.TokenCache.BuildROPCTokenKey(tenant, user.LoginId);
-            var cachedToken = APITestAutomation.Helpers.TokenCache.Get(key);
+            var key = TokenCache.BuildROPCTokenKey(tenant, user.LoginId);
+            var cachedToken = TokenCache.Get(key);
             if (!string.IsNullOrWhiteSpace(cachedToken))
             {
                 return cachedToken;
@@ -31,15 +31,15 @@ namespace API.Core.Authentications
                 user.PasswordEnvVar
             ).ExecuteAsync();
 
-            APITestAutomation.Helpers.TokenCache.Set(key, result.AccessToken);
+            TokenCache.Set(key, result.AccessToken);
             return result.AccessToken;
 
         }
 
         public static string PPSProformaToken(string tenant, ConfigSetup.UserConfig user)
         {
-            var key = APITestAutomation.Helpers.TokenCache.BuildPPSProformaKey(tenant, user.LoginId);
-            var cachedToken = APITestAutomation.Helpers.TokenCache.Get(key);
+            var key = TokenCache.BuildPPSProformaKey(tenant, user.LoginId);
+            var cachedToken = TokenCache.Get(key);
             if (!string.IsNullOrWhiteSpace(cachedToken))
             {
                 return cachedToken;
@@ -49,7 +49,7 @@ namespace API.Core.Authentications
             var config = ConfigSetup.GetTenantConfig(tenant);
 
             var token = $"https://login.microsoftonline.com/{config.TenantId}/oauth2/v2.0/token";
-            var ropcToken =  GetROPCToken(tenant, user).Result;
+            var ropcToken = GetROPCToken(tenant, user).Result;
             string bodyParams = $"grant_type=password&username={user.LoginId}&password={user.PasswordEnvVar}&client_id={config.AppId}&acode={ropcToken}&scope={config.PPSScope}";
 
             var response = Given()
@@ -61,7 +61,7 @@ namespace API.Core.Authentications
 
             var raw = response.Content.ReadAsStringAsync().Result;
             var tokenResult = JObject.Parse(raw)["access_token"]?.ToString() ?? throw new Exception("No access token found in response");
-            APITestAutomation.Helpers.TokenCache.Set(key, tokenResult);
+            TokenCache.Set(key, tokenResult);
 
             return tokenResult ?? throw new Exception("No token received");
         }

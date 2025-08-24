@@ -1,7 +1,7 @@
-using API.Core.Models.OpenAPI;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Net;
+using API.Core.Models;
 
 namespace API.Core.Services.OpenAPI
 {

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace APITestAutomation.Models.ProfileModels
+namespace API.Core.Models
 {
     public class TenantProfile
     {

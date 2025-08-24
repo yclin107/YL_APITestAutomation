@@ -3,7 +3,7 @@ using API.Core.Helpers;
 using System.Text.Json;
 using static RestAssured.Dsl;
 
-namespace API.TestBase.Tests.StepDefinitions
+namespace API.TestBase.Tests.Workflows.StepDefinitions
 {
     public class ApiStepDefinitions : TestBase
     {
@@ -29,7 +29,7 @@ namespace API.TestBase.Tests.StepDefinitions
             AllureApi.Step("Authenticate user", () =>
             {
                 var user = ConfigSetup.GetUser(_tenant, _userId);
-                _token = API.Core.Authentications.TokenService.PPSProformaToken(_tenant, user);
+                _token = TokenService.PPSProformaToken(_tenant, user);
             });
         }
 

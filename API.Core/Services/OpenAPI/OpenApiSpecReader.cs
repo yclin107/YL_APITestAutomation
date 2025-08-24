@@ -1,8 +1,8 @@
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
-using API.Core.Models.OpenAPI;
 using YamlDotNet.Serialization;
 using System.Text.Json;
+using API.Core.Models;
 
 namespace API.Core.Services.OpenAPI
 {

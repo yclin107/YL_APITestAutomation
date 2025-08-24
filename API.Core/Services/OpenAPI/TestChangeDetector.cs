@@ -1,4 +1,4 @@
-using API.Core.Models.OpenAPI;
+using API.Core.Models;
 using Microsoft.OpenApi.Models;
 
 namespace API.Core.Services.OpenAPI

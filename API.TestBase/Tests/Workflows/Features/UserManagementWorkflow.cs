@@ -1,7 +1,7 @@
 using Allure.NUnit.Attributes;
-using API.TestBase.Tests.StepDefinitions;
+using API.TestBase.Tests.Workflows.StepDefinitions;
 
-namespace API.TestBase.Tests.Features
+namespace API.TestBase.Tests.Workflows.Features
 {
     [TestFixture]
     [Ignore("Skip BDD workflow tests")]

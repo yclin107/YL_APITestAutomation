@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace APITestAutomation.Models
+namespace API.Core.Models
 {
     public class OAuthTokenResponse
     {

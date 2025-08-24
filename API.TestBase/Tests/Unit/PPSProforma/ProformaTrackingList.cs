@@ -10,7 +10,7 @@ using API.TestBase.Models.ProformaModels;
 using System.Text.Json;
 using static RestAssured.Dsl;
 
-namespace API.TestBase.Tests.PPSProforma
+namespace API.TestBase.Tests.Component.PPSProforma
 {
     [TestFixture]
     [AllureFeature("Proforma Tracking List")]
