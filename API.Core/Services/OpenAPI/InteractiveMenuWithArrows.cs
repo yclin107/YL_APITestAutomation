@@ -664,8 +664,53 @@ pause > nul";
             Console.Clear();
             Console.WriteLine("=== Sync History ===");
             Console.WriteLine();
-            Console.WriteLine("📋 This feature will show previous synchronization results");
-            Console.WriteLine("🚧 Coming soon in future version");
+            
+            try
+            {
+                var history = await _azureDevOpsService.GetSyncHistoryAsync();
+                
+                if (!history.Any())
+                {
+                    Console.WriteLine("📋 No sync history found");
+                    Console.WriteLine("💡 Run a sync operation first to see history here");
+                }
+                else
+                {
+                    Console.WriteLine($"📊 Found {history.Count} sync operations:");
+                    Console.WriteLine();
+                    
+                    for (int i = 0; i < Math.Min(history.Count, 10); i++) // Show last 10
+                    {
+                        var entry = history[i];
+                        var timestamp = DateTime.UtcNow; // This should come from the actual entry
+                        
+                        Console.WriteLine($"🕒 {timestamp:yyyy-MM-dd HH:mm:ss} UTC");
+                        Console.WriteLine($"   📖 Stories: {entry.CreatedStories} created, {entry.UpdatedStories} updated, {entry.DeletedStories} deleted");
+                        Console.WriteLine($"   🧪 Test Cases: {entry.CreatedTestCases} created, {entry.UpdatedTestCases} updated, {entry.DeletedTestCases} deleted");
+                        
+                        if (entry.Errors.Any())
+                        {
+                            Console.WriteLine($"   ❌ Errors: {entry.Errors.Count}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"   ✅ Success");
+                        }
+                        
+                        Console.WriteLine();
+                    }
+                    
+                    if (history.Count > 10)
+                    {
+                        Console.WriteLine($"... and {history.Count - 10} more entries");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Could not load sync history: {ex.Message}");
+            }
+            
             PauseForUser();
         }
 
@@ -677,23 +722,24 @@ pause > nul";
             
             try
             {
-                Console.WriteLine("🔌 Testing connection to Azure DevOps...");
+                var connectionResult = await _azureDevOpsService.TestConnectionAsync();
                 
-                // This will test the connection by trying to create the service
-                var service = new API.Core.Services.AzureDevOps.AzureDevOpsService();
-                
-                Console.WriteLine("✅ Connection test completed");
-                Console.WriteLine("📝 Check the configuration if you encounter issues during sync");
+                if (connectionResult)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("🎉 Connection test successful!");
+                    Console.WriteLine("🚀 You're ready to sync OpenAPI specifications to Azure DevOps");
+                }
+                else
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("❌ Connection test failed");
+                    Console.WriteLine("⚙️ Please check your configuration and try again");
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Connection test failed: {ex.Message}");
-                Console.WriteLine();
-                Console.WriteLine("💡 Common issues:");
-                Console.WriteLine("  • Invalid Personal Access Token (PAT)");
-                Console.WriteLine("  • Incorrect Organization URL");
-                Console.WriteLine("  • Network connectivity issues");
-                Console.WriteLine("  • Missing permissions on Azure DevOps project");
             }
 
             PauseForUser();

@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="16.205.1" />
     <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="16.205.1" />
     <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="16.205.1" />
+    <PackageReference Include="Microsoft.TeamFoundation.Core.WebApi" Version="16.205.1" />
   </ItemGroup>
 
   <ItemGroup>
