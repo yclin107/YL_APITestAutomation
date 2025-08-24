@@ -5,7 +5,6 @@ using API.Core.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NJsonSchema;
-using System.Text;
 
 namespace API.Core.Services.OpenAPI
 {
@@ -26,6 +25,7 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine("using Allure.NUnit.Attributes;");
             sb.AppendLine("using API.Core.Helpers;");
             sb.AppendLine("using System.Net;");
+            sb.AppendLine("using System.Text;");
             sb.AppendLine("using System.Text.Json;");
             sb.AppendLine("using static RestAssured.Dsl;");
             sb.AppendLine("using Newtonsoft.Json.Schema;");
