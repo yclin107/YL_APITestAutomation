@@ -177,127 +177,129 @@ namespace API.Core.Services.OpenAPI
             PauseForUser();
         }
 
-        private async Task RunSingleThreadTests(string selectedProfile, string filter, string allureResultsPath)
+        private async Task RunTestsInSameConsole(string selectedProfile, int threads, string filter)
         {
-            var batchContent = $@"@echo off
-cd /d ""{GetSolutionRoot()}""
-set TEST_PROFILE={selectedProfile}
-echo 🚀 Running tests with profile: {selectedProfile}
-echo 📊 Results will be saved to: {allureResultsPath}
-echo.
-dotnet test ""{(string.IsNullOrEmpty(filter) ? "" : $" --filter \"{filter}\"")}
-echo.
-echo ✅ Tests completed! Press any key to close...
-pause > nul";
+            Console.Clear();
+            Console.WriteLine("🚀 Starting test execution...");
+            Console.WriteLine($"📋 Profile: {selectedProfile}");
+            Console.WriteLine($"⚡ Threads: {threads}");
+            if (!string.IsNullOrEmpty(filter))
+                Console.WriteLine($"🔍 Filter: {filter}");
+            Console.WriteLine();
 
-            var batchPath = Path.Combine(Path.GetTempPath(), "run_tests_single.bat");
-            await File.WriteAllTextAsync(batchPath, batchContent);
+            // Clean allure-results before running tests
+            var allureResultsPath = Path.Combine(GetSolutionRoot(), "allure-results");
+            if (Directory.Exists(allureResultsPath))
+            {
+                Directory.Delete(allureResultsPath, true);
+                Directory.CreateDirectory(allureResultsPath);
+                Console.WriteLine("🧹 Cleaned previous test results");
+            }
 
-            var process = new Process()
+            // Update NUnit.runsettings with thread count
+            await UpdateNUnitSettings(threads);
+
+            // Build dotnet test command
+            var arguments = new List<string>
+            {
+                "test",
+                $"\"{GetTestProjectPath()}\"",
+                "--settings NUnit.runsettings",
+                "--logger \"allure;LogLevel=trace\""
+            };
+
+            if (!string.IsNullOrEmpty(filter))
+            {
+                arguments.Add($"--filter \"{filter}\"");
+            }
+
+            var argumentString = string.Join(" ", arguments);
+
+            Console.WriteLine($"🔧 Command: dotnet {argumentString}");
+            Console.WriteLine();
+
+            var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = "cmd",
-                    Arguments = $"/c start \"API Tests - Single Thread\" cmd /k \"{batchPath}\"",
-                    UseShellExecute = true,
-                    CreateNoWindow = false
+                    FileName = "dotnet",
+                    Arguments = argumentString,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    WorkingDirectory = GetSolutionRoot(),
+                    CreateNoWindow = true
                 }
             };
 
+            // Set environment variable for profile
+            process.StartInfo.Environment["TEST_PROFILE"] = selectedProfile;
+
+            Console.WriteLine("📊 Test execution started...");
+            Console.WriteLine("═══════════════════════════════════════════════════════════");
+
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    Console.WriteLine(e.Data);
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    Console.WriteLine($"ERROR: {e.Data}");
+            };
+
             process.Start();
-            Console.WriteLine("🚀 Opening tests in new terminal window...");
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            await process.WaitForExitAsync();
+
+            Console.WriteLine("═══════════════════════════════════════════════════════════");
+            Console.WriteLine($"✅ Tests completed with exit code: {process.ExitCode}");
+            
+            if (process.ExitCode == 0)
+            {
+                Console.WriteLine("🎉 All tests passed successfully!");
+                Console.WriteLine($"📊 Results saved to: {allureResultsPath}");
+            }
+            else
+            {
+                Console.WriteLine("❌ Some tests failed or there were errors");
+            }
+
+            PauseForUser();
         }
 
-        private async Task RunMultiThreadTests(string selectedProfile, string filter, int threads, string allureResultsPath)
+        private async Task UpdateNUnitSettings(int threads)
         {
-            Console.WriteLine($"🚀 Starting {threads} parallel test threads...");
-            Console.WriteLine($"📊 Each thread will save results to: {allureResultsPath}");
-            Console.WriteLine($"👥 Each thread will use a different user from the profile");
-            Console.WriteLine();
-
-            var processes = new List<Process>();
+            var settingsPath = Path.Combine(GetSolutionRoot(), "NUnit.runsettings");
             
-            // Load profile to check available users
+            if (!File.Exists(settingsPath))
+            {
+                Console.WriteLine("⚠️  NUnit.runsettings not found, using default settings");
+                return;
+            }
+
             try
             {
-                var parts = selectedProfile.Split('/');
-                var profileManager = new ProfileManager();
-                var masterPassword = Environment.GetEnvironmentVariable("MASTER_PASSWORD");
-                var profile = await profileManager.LoadProfileAsync(parts[0], parts[1], parts[2], masterPassword);
+                var content = await File.ReadAllTextAsync(settingsPath);
                 
-                if (profile == null)
-                {
-                    Console.WriteLine("❌ Could not load profile for user validation");
-                    return;
-                }
-                
-                var availableUsers = profile.Users.Values.ToList();
-                Console.WriteLine($"👥 Profile has {availableUsers.Count} users available");
-                
-                if (threads > availableUsers.Count)
-                {
-                    Console.WriteLine($"⚠️  Warning: {threads} threads requested but only {availableUsers.Count} users available");
-                    Console.WriteLine($"   Users will be reused in round-robin fashion");
-                }
-                
-                Console.WriteLine();
+                // Update NumberOfTestWorkers
+                var updatedContent = System.Text.RegularExpressions.Regex.Replace(
+                    content,
+                    @"<NumberOfTestWorkers>\d+</NumberOfTestWorkers>",
+                    $"<NumberOfTestWorkers>{threads}</NumberOfTestWorkers>"
+                );
+
+                await File.WriteAllTextAsync(settingsPath, updatedContent);
+                Console.WriteLine($"⚙️  Updated NUnit.runsettings: {threads} worker threads");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️  Could not validate users: {ex.Message}");
+                Console.WriteLine($"⚠️  Could not update NUnit.runsettings: {ex.Message}");
             }
-
-            for (int i = 1; i <= threads; i++)
-            {
-                // Each process will get a different user via round-robin assignment
-                var threadFilter = string.IsNullOrEmpty(filter) ? "" : filter;
-                
-                var threadId = $"Thread{i}";
-                
-                var batchContent = $@"@echo off
-cd /d ""{GetSolutionRoot()}""
-set TEST_PROFILE={selectedProfile}
-set ALLURE_RESULTS_DIRECTORY={allureResultsPath}
-set THREAD_ID={i}
-set ALLURE_RESULTS_DIRECTORY={allureResultsPath}
-title API Tests - {threadId}
-echo 🧵 {threadId}: Running tests with profile: {selectedProfile} 
-echo 📊 {threadId}: Results will be saved to: {allureResultsPath}
-echo ⚡ {threadId}: Thread {i} of {threads}
-echo 👤 {threadId}: User will be assigned automatically via round-robin
-echo.
-dotnet test API.TestBase --settings NUnit.runsettings --logger ""allure;LogLevel=trace""{(string.IsNullOrEmpty(threadFilter) ? "" : $" --filter \"{threadFilter}\"")}
-echo.
-echo ✅ {threadId}: Tests completed! Press any key to close...
-pause > nul";
-
-                var batchPath = Path.Combine(Path.GetTempPath(), $"run_tests_thread_{i}.bat");
-                await File.WriteAllTextAsync(batchPath, batchContent);
-
-                var process = new Process()
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "cmd",
-                        Arguments = $"/c start \"API Tests - Thread {i}\" cmd /k \"{batchPath}\"",
-                        UseShellExecute = true,
-                        CreateNoWindow = false
-                    }
-                };
-
-                process.Start();
-                processes.Add(process);
-                
-                Console.WriteLine($"🧵 Thread {i}: Terminal opened");
-                
-                // Small delay between starting threads to avoid conflicts
-                await Task.Delay(2000); // Increased delay for better user assignment
-            }
-
-            Console.WriteLine();
-            Console.WriteLine($"✅ All {threads} test threads started!");
-            Console.WriteLine("Each thread is running in its own terminal window with different users.");
-            Console.WriteLine("Check each terminal to see which user is assigned to each thread.");
         }
 
         private async Task HandleGenerateReport()
