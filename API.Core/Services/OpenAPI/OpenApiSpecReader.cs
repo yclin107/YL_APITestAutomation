@@ -3,6 +3,7 @@ using Microsoft.OpenApi.Readers;
 using YamlDotNet.Serialization;
 using System.Text.Json;
 using API.Core.Models;
+using Microsoft.OpenApi;
 
 namespace API.Core.Services.OpenAPI
 {
@@ -29,13 +30,31 @@ namespace API.Core.Services.OpenAPI
                     var serializer = new SerializerBuilder().JsonCompatible().Build();
                     var json = serializer.Serialize(yamlObject);
                     
-                    var reader = new OpenApiStringReader();
+                    var reader = new OpenApiStringReader(new OpenApiReaderSettings
+                    {
+                        ReferenceResolution = ReferenceResolutionSetting.ResolveLocalReferences,
+                        LoadExternalRefs = false
+                    });
                     document = reader.Read(json, out var diagnostic);
                 }
                 else
                 {
-                    var reader = new OpenApiStringReader();
+                    var reader = new OpenApiStringReader(new OpenApiReaderSettings
+                    {
+                        ReferenceResolution = ReferenceResolutionSetting.ResolveLocalReferences,
+                        LoadExternalRefs = false
+                    });
                     document = reader.Read(content, out var diagnostic);
+                }
+                
+                // Log any diagnostic issues
+                if (diagnostic.Errors.Any())
+                {
+                    Console.WriteLine($"⚠️  OpenAPI parsing warnings:");
+                    foreach (var error in diagnostic.Errors.Take(5)) // Show first 5 errors
+                    {
+                        Console.WriteLine($"   • {error.Message}");
+                    }
                 }
             }
             catch (Exception ex)
@@ -69,11 +88,15 @@ namespace API.Core.Services.OpenAPI
         private static Dictionary<string, OpenApiEndpointTest> ExtractEndpointTests(OpenApiDocument document)
         {
             var endpointTests = new Dictionary<string, OpenApiEndpointTest>();
+            
+            Console.WriteLine($"🔍 Processing {document.Paths?.Count ?? 0} paths from OpenAPI document...");
 
             foreach (var path in document.Paths)
             {
+                Console.WriteLine($"📁 Processing path: {path.Key}");
                 foreach (var operation in path.Value.Operations)
                 {
+                    Console.WriteLine($"   🔧 Processing operation: {operation.Key} {path.Key}");
                     var key = $"{operation.Key.ToString().ToUpper()}:{path.Key}";
                     var endpointTest = new OpenApiEndpointTest
                     {
@@ -87,15 +110,9 @@ namespace API.Core.Services.OpenAPI
                             Name = p.Name,
                             In = p.In,
                             Required = p.Required,
-                            Schema = p.Schema != null ? new OpenApiSchema 
-                            { 
-                                Type = p.Schema.Type,
-                                Format = p.Schema.Format
-                            } : null
+                            Schema = CreateSimpleSchema(p.Schema)
                         }).ToList() ?? new List<OpenApiParameter>(),
-                        Responses = operation.Value.Responses?.ToDictionary(
-                            r => r.Key, 
-                            r => r.Value) ?? new Dictionary<string, OpenApiResponse>(),
+                        Responses = CreateSimpleResponses(operation.Value.Responses),
                         RequestBody = operation.Value.RequestBody != null ? new OpenApiRequestBody
                         {
                             Required = operation.Value.RequestBody.Required,
@@ -107,8 +124,11 @@ namespace API.Core.Services.OpenAPI
                     };
 
                     endpointTests[key] = endpointTest;
+                    Console.WriteLine($"   ✅ Added endpoint: {key}");
                 }
             }
+            
+            Console.WriteLine($"✅ Processed {endpointTests.Count} total endpoints");
 
             return endpointTests;
         }
@@ -117,6 +137,53 @@ namespace API.Core.Services.OpenAPI
         {
             var cleanPath = path.Replace("/", "_").Replace("{", "").Replace("}", "").Trim('_');
             return $"{method}_{cleanPath}";
+        }
+        
+        private static OpenApiSchema? CreateSimpleSchema(OpenApiSchema? originalSchema)
+        {
+            if (originalSchema == null) return null;
+            
+            // Create a simple schema without circular references
+            return new OpenApiSchema
+            {
+                Type = originalSchema.Type,
+                Format = originalSchema.Format,
+                Description = originalSchema.Description
+            };
+        }
+        
+        private static Dictionary<string, OpenApiResponse> CreateSimpleResponses(IDictionary<string, OpenApiResponse>? originalResponses)
+        {
+            if (originalResponses == null) return new Dictionary<string, OpenApiResponse>();
+            
+            var simpleResponses = new Dictionary<string, OpenApiResponse>();
+            
+            foreach (var response in originalResponses)
+            {
+                // Create a simple response without potential circular references
+                var simpleResponse = new OpenApiResponse
+                {
+                    Description = response.Value.Description,
+                    Content = new Dictionary<string, OpenApiMediaType>()
+                };
+                
+                // Copy content types but simplify schemas
+                if (response.Value.Content != null)
+                {
+                    foreach (var content in response.Value.Content)
+                    {
+                        var simpleMediaType = new OpenApiMediaType
+                        {
+                            Schema = CreateSimpleSchema(content.Value.Schema)
+                        };
+                        simpleResponse.Content[content.Key] = simpleMediaType;
+                    }
+                }
+                
+                simpleResponses[response.Key] = simpleResponse;
+            }
+            
+            return simpleResponses;
         }
     }
 }
