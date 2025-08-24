@@ -146,28 +146,8 @@ namespace API.Core.Services.OpenAPI
                     Directory.CreateDirectory(allureResultsPath);
                 }
 
-                var arguments = $"test --project \"{GetTestProjectPath()}\" --logger \"allure;LogLevel=trace\"";
-                
-                if (threads > 1)
-                {
-                    arguments += $" --maxcpucount:{threads}";
-                }
-                
-                if (!string.IsNullOrEmpty(filter))
-                {
-                    arguments += $" --filter \"{filter}\"";
-                }
-
-                if (threads == 1)
-                {
-                    // Single thread execution
-                    await RunSingleThreadTests(selectedProfile, filter, allureResultsPath);
-                }
-                else
-                {
-                    // Multi-thread execution - run each thread in separate terminal
-                    await RunMultiThreadTests(selectedProfile, filter, threads, allureResultsPath);
-                }
+                // Run tests in same console
+                await RunTestsInSameConsole(selectedProfile, threads, filter);
             }
             catch (Exception ex)
             {
