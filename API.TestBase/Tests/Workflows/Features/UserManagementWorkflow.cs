@@ -3,7 +3,7 @@ using API.TestBase.Tests.Workflows.StepDefinitions;
 
 namespace API.TestBase.Tests.Workflows.Features
 {
-    [TestFixture]
+    //[TestFixture]
     [Ignore("Skip BDD workflow tests")]
     [AllureFeature("User Management Workflow")]
     public class UserManagementWorkflow : TestBase
@@ -16,7 +16,7 @@ namespace API.TestBase.Tests.Workflows.Features
             _steps = new ApiStepDefinitions();
         }
 
-        [Test]
+        //[Test]
         [Category("BDD")]
         public void CompleteUserManagementWorkflow()
         {
@@ -61,7 +61,7 @@ namespace API.TestBase.Tests.Workflows.Features
             _steps.ClearContext();
         }
 
-        [Test]
+        //[Test]
         [Category("BDD")]
         public void UserAuthorizationWorkflow()
         {
