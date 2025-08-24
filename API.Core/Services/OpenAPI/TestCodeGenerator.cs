@@ -5,6 +5,7 @@ using API.Core.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NJsonSchema;
+using System.Text;
 
 namespace API.Core.Services.OpenAPI
 {
@@ -95,7 +96,7 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine($"        private async Task ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
             sb.AppendLine("            // Add response as Allure attachment for viewing");
-            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(jsonResponse));");
+            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", Encoding.UTF8.GetBytes(jsonResponse));");
             sb.AppendLine();
             
             // Generate schema JSON from OpenAPI response
@@ -119,7 +120,7 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("            try");
                 sb.AppendLine("            {");
                 sb.AppendLine("                // Add expected schema as Allure attachment");
-                sb.AppendLine($"                var schemaJson = @\"{FormatJsonForCSharp(schemaJson)}\";");
+                sb.AppendLine($"                AllureApi.AddAttachment(\"Expected Schema\", \"application/json\", Encoding.UTF8.GetBytes(schemaJson));");
                 sb.AppendLine("                AllureApi.AddAttachment(\"Expected Schema\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(schemaJson));");
                 sb.AppendLine();
                 sb.AppendLine("                var schema = await NJsonSchema.JsonSchema.FromJsonAsync(schemaJson);");
@@ -130,8 +131,8 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("                {");
                 sb.AppendLine("                    var errorMessages = errors.Select(e => $\"{e.Path}: {e.Kind} - {e.Property}\");");
                 sb.AppendLine("                    var allErrors = string.Join(\", \", errorMessages);");
-                sb.AppendLine("                    Console.WriteLine($\"❌ Schema validation failed for {endpointInfo}. Errors: {allErrors}\");");
-                sb.AppendLine("                    Console.WriteLine($\"📋 Expected schema type: object with specific properties\");");
+                sb.AppendLine($"                    Console.WriteLine($\"❌ Schema validation failed for {endpointInfo}. Errors: {{allErrors}}\");");
+                sb.AppendLine("                    Console.WriteLine(\"📋 Expected schema type: object with specific properties\");");
                 sb.AppendLine("                    Console.WriteLine($\"📋 Actual response: {(jsonResponse.Length > 200 ? jsonResponse.Substring(0, 200) + \"...\" : jsonResponse)}\");");
                 sb.AppendLine("                    Assert.Fail($\"Response schema validation failed. Errors: {allErrors}\");");
                 sb.AppendLine("                }");
@@ -179,7 +180,7 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine($"        private void ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
             sb.AppendLine("            // Add response as Allure attachment for viewing");
-            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(jsonResponse));");
+            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", Encoding.UTF8.GetBytes(jsonResponse));");
             sb.AppendLine();
             sb.AppendLine("            // Basic validation - ensure response is valid JSON");
             sb.AppendLine("            try");
@@ -834,7 +835,7 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine("            {");
             sb.AppendLine($"                AttachResponse(\"{methodName}SchemaValidationResponse\", rawJson);");
             sb.AppendLine("                // Also add as step attachment for direct viewing");
-            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(rawJson));");
+            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", Encoding.UTF8.GetBytes(rawJson));");
             sb.AppendLine("            });");
             sb.AppendLine();
             
