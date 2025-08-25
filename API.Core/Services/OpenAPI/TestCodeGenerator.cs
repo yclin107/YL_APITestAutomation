@@ -933,6 +933,107 @@ namespace API.Core.Services.OpenAPI
             }
         }
 
+        private static string? GetActualRequestBodyFromDocument(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
+        {
+            try
+            {
+                // Find the actual path and operation in the OpenAPI document
+                var pathItem = spec.Document.Paths.FirstOrDefault(p => p.Key == endpoint.Path);
+                if (pathItem.Value == null) return null;
+
+                var operation = pathItem.Value.Operations.FirstOrDefault(o => 
+                    o.Key.ToString().Equals(endpoint.Method, StringComparison.OrdinalIgnoreCase));
+                if (operation.Value?.RequestBody == null) return null;
+
+                var requestBody = operation.Value.RequestBody;
+                
+                // Look for application/json content
+                var jsonContent = requestBody.Content?.FirstOrDefault(c => 
+                    c.Key.Contains("application/json", StringComparison.OrdinalIgnoreCase));
+                
+                if (jsonContent?.Value == null) return null;
+
+                var mediaType = jsonContent.Value.Value;
+                
+                // First try to get example
+                if (mediaType.Example != null)
+                {
+                    return ConvertOpenApiValueToCSharp(mediaType.Example);
+                }
+                
+                // Try examples collection
+                if (mediaType.Examples?.Any() == true)
+                {
+                    var firstExample = mediaType.Examples.First().Value;
+                    if (firstExample.Value != null)
+                    {
+                        return ConvertOpenApiValueToCSharp(firstExample.Value);
+                    }
+                }
+                
+                // Fallback to schema-based generation
+                if (mediaType.Schema != null)
+                {
+                    return GenerateRequestBodyFromSchema(mediaType.Schema);
+                }
+                
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Error extracting request body for {endpoint.Method} {endpoint.Path}: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static string ConvertOpenApiValueToCSharp(Microsoft.OpenApi.Any.IOpenApiAny openApiValue)
+        {
+            try
+            {
+                if (openApiValue is Microsoft.OpenApi.Any.OpenApiObject obj)
+                {
+                    var properties = new List<string>();
+                    foreach (var prop in obj)
+                    {
+                        var value = ConvertOpenApiValueToCSharpValue(prop.Value);
+                        properties.Add($"{prop.Key} = {value}");
+                    }
+                    return $"new {{ {string.Join(", ", properties)} }}";
+                }
+                else if (openApiValue is Microsoft.OpenApi.Any.OpenApiArray arr)
+                {
+                    var items = arr.Select(item => ConvertOpenApiValueToCSharpValue(item));
+                    return $"new[] {{ {string.Join(", ", items)} }}";
+                }
+                else
+                {
+                    return ConvertOpenApiValueToCSharpValue(openApiValue);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Error converting OpenAPI value: {ex.Message}");
+                return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
+            }
+        }
+
+        private static string ConvertOpenApiValueToCSharpValue(Microsoft.OpenApi.Any.IOpenApiAny value)
+        {
+            return value switch
+            {
+                Microsoft.OpenApi.Any.OpenApiString str => $"\"{str.Value}\"",
+                Microsoft.OpenApi.Any.OpenApiInteger intVal => intVal.Value.ToString(),
+                Microsoft.OpenApi.Any.OpenApiLong longVal => longVal.Value.ToString(),
+                Microsoft.OpenApi.Any.OpenApiFloat floatVal => floatVal.Value.ToString("F2"),
+                Microsoft.OpenApi.Any.OpenApiDouble doubleVal => doubleVal.Value.ToString("F2"),
+                Microsoft.OpenApi.Any.OpenApiBoolean boolVal => boolVal.Value.ToString().ToLower(),
+                Microsoft.OpenApi.Any.OpenApiDateTime dateVal => $"DateTime.Parse(\"{dateVal.Value:yyyy-MM-ddTHH:mm:ssZ}\")",
+                Microsoft.OpenApi.Any.OpenApiObject obj => ConvertOpenApiValueToCSharp(obj),
+                Microsoft.OpenApi.Any.OpenApiArray arr => ConvertOpenApiValueToCSharp(arr),
+                _ => "\"test-value\""
+            };
+        }
+
         private static string GenerateRequestBodyFromSchema(OpenApiSchema schema)
         {
             var properties = new List<string>();
