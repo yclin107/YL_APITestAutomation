@@ -891,8 +891,8 @@ namespace API.Core.Services.OpenAPI
 
         private static string GenerateRequestBodyFromOpenApi(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
         {
-            if (endpoint.RequestBody == null)
-                return "null";
+            try
+            {
                 if (endpoint.RequestBody?.Content == null)
                 {
                     return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
@@ -911,99 +911,21 @@ namespace API.Core.Services.OpenAPI
                 
                 // Handle schema references
                 if (schema.Reference != null)
-            return GenerateRequestBodyFromSchema(endpoint, spec);
-        }
-
-        private static string GenerateRequestBodyFromSchema(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
-        {
-            try
-            {
-                // Find the request body content - prefer application/json
-                var requestBody = endpoint.RequestBody;
-                if (requestBody?.Content == null)
-                    return "null";
-
-                // Try different content types in order of preference
-                var contentTypes = new[] { "application/json", "text/json", "application/*+json" };
-                OpenApiMediaType? mediaType = null;
-                
-                foreach (var contentType in contentTypes)
                 {
-                    if (requestBody.Content.TryGetValue(contentType, out mediaType))
-                        break;
-                }
-
-                if (mediaType?.Schema == null)
-                    return "null";
-
-                // Check if it's a reference
-                if (!string.IsNullOrEmpty(mediaType.Schema.Reference?.Id))
-                {
-                    var refId = mediaType.Schema.Reference.Id;
-                    var referencedSchema = spec.Document.Components?.Schemas?.GetValueOrDefault(refId);
-                    if (referencedSchema != null)
+                    var resolvedSchema = ResolveSchemaReference(schema.Reference, spec);
+                    if (resolvedSchema != null)
                     {
-                        return GenerateObjectFromSchema(referencedSchema);
+                        schema = resolvedSchema;
                     }
                 }
-                
-                // Generate from direct schema
-                return GenerateObjectFromSchema(mediaType.Schema);
+
+                return GenerateRequestBodyFromSchema(schema);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️  Could not generate request body from schema: {ex.Message}");
+                Console.WriteLine($"⚠️  Error generating request body: {ex.Message}");
                 return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
             }
-        }
-
-        private static string GenerateObjectFromSchema(OpenApiSchema schema)
-        {
-            if (schema?.Properties == null || !schema.Properties.Any())
-                return "new { testProperty = \"testValue\" }";
-
-            var properties = new List<string>();
-            
-            foreach (var prop in schema.Properties)
-            {
-                var propName = prop.Key;
-                var propSchema = prop.Value;
-                var value = GenerateValueFromSchema(propSchema);
-                properties.Add($"{propName} = {value}");
-            }
-
-            return $"new {{ {string.Join(", ", properties)} }}";
-        }
-
-        private static string GenerateValueFromSchema(OpenApiSchema schema)
-        {
-            return schema.Type?.ToLower() switch
-            {
-                "string" => schema.Format?.ToLower() switch
-                {
-                    "date" => "DateTime.Now.ToString(\"yyyy-MM-dd\")",
-                    "date-time" => "DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\")",
-                    "uuid" => "Guid.NewGuid().ToString()",
-                    _ => $"\"{GetDefaultStringValue(schema)}\""
-                },
-                "integer" => "123",
-                "number" => "123.45",
-                "boolean" => "true",
-                "array" => "new[] { \"test-item\" }",
-                _ => "\"test-value\""
-            };
-        }
-
-        private static string GetDefaultStringValue(OpenApiSchema schema)
-        {
-            // Use example if available
-            if (schema.Example != null)
-            {
-                return schema.Example.ToString() ?? "test-string";
-            }
-            
-            // Generate based on property name patterns
-            return "test-string";
         }
 
         private static string GenerateRequestBodyFromSchema(OpenApiSchema schema)
