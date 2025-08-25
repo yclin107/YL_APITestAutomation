@@ -52,9 +52,6 @@ namespace API.Core.Services.OpenAPI
             // Generate schema validation methods
             GenerateSchemaValidationMethods(sb, endpoints, spec);
             
-            // Add helper methods  
-            sb.AppendLine(GenerateHelperMethods());
-            
             sb.AppendLine("    }");
             sb.AppendLine("}");
 
@@ -1033,47 +1030,6 @@ namespace API.Core.Services.OpenAPI
             }
 
             return sanitized;
-        }
-
-        private static string GenerateHelperMethods()
-        {
-            var sb = new StringBuilder();
-            
-            sb.AppendLine();
-            sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// Generates test values for different parameter types");
-            sb.AppendLine("        /// Used to populate required parameters in API calls");
-            sb.AppendLine("        /// </summary>");
-            sb.AppendLine("        private object GetTestValue(string type)");
-            sb.AppendLine("        {");
-            sb.AppendLine("            return type?.ToLower() switch");
-            sb.AppendLine("            {");
-            sb.AppendLine("                \"string\" => \"test-string-value\",");
-            sb.AppendLine("                \"integer\" => 123,");
-            sb.AppendLine("                \"number\" => 123.45,");
-            sb.AppendLine("                \"boolean\" => true,");
-            sb.AppendLine("                \"array\" => new[] { \"test-item\" },");
-            sb.AppendLine("                \"uuid\" => Guid.NewGuid().ToString(),");
-            sb.AppendLine("                \"date\" => DateTime.Now.ToString(\"yyyy-MM-dd\"),");
-            sb.AppendLine("                \"date-time\" => DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\"),");
-            sb.AppendLine("                _ => \"default-test-value\"");
-            sb.AppendLine("            };");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// Generates a generic test request body for POST/PUT operations");
-            sb.AppendLine("        /// Override this method to provide endpoint-specific request bodies");
-            sb.AppendLine("        /// </summary>");
-            sb.AppendLine("        private object GenerateTestRequestBody()");
-            sb.AppendLine("        {");
-            sb.AppendLine("            return new { ");
-            sb.AppendLine("                testProperty = \"testValue\", ");
-            sb.AppendLine("                id = Guid.NewGuid().ToString(),");
-            sb.AppendLine("                timestamp = DateTime.UtcNow");
-            sb.AppendLine("            };");
-            sb.AppendLine("        }");
-            
-            return sb.ToString();
         }
     }
 }
