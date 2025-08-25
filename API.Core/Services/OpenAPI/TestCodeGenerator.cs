@@ -76,7 +76,10 @@ namespace API.Core.Services.OpenAPI
                 
                 if (!string.IsNullOrEmpty(successResponse.Key) && successResponse.Value != null)
                 {
-                    GenerateSchemaValidationMethod(sb, methodName, schemaKey, successResponse.Value, spec);
+                    var propertySchema = schema.Properties.ContainsKey(property.Key) 
+                        ? schema.Properties[property.Key] 
+                        : null;
+                        
                 }
                 else
                 {
