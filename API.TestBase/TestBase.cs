@@ -186,6 +186,26 @@ namespace API.TestBase
         {
             PropertyNameCaseInsensitive = true
         };
+
+        /// <summary>
+        /// Generates test values for different parameter types
+        /// Used to populate required parameters in API calls
+        /// </summary>
+        protected object GetTestValue(string type)
+        {
+            return type?.ToLower() switch
+            {
+                "string" => "test-string-value",
+                "integer" => 123,
+                "number" => 123.45,
+                "boolean" => true,
+                "array" => new[] { "test-item" },
+                "uuid" => Guid.NewGuid().ToString(),
+                "date" => DateTime.Now.ToString("yyyy-MM-dd"),
+                "date-time" => DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                _ => "default-test-value"
+            };
+        }
     }
 
     public class TestContext
