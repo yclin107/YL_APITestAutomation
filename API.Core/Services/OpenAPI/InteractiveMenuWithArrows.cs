@@ -161,12 +161,12 @@ namespace API.Core.Services.OpenAPI
         private async Task RunTestsInSameConsole(string selectedProfile, int threads, string filter)
         {
             Console.Clear();
-            Console.WriteLine("🚀 Starting test execution...");
+            //Console.WriteLine("Starting test execution...");
+            Console.WriteLine();
             Console.WriteLine($"📋 Profile: {selectedProfile}");
             Console.WriteLine($"⚡ Threads: {threads}");
             if (!string.IsNullOrEmpty(filter))
                 Console.WriteLine($"🔍 Filter: {filter}");
-            Console.WriteLine();
 
             // Clean allure-results before running tests
             var allureResultsPath = Path.Combine(GetSolutionRoot(), "allure-results");
@@ -174,7 +174,6 @@ namespace API.Core.Services.OpenAPI
             {
                 Directory.Delete(allureResultsPath, true);
                 Directory.CreateDirectory(allureResultsPath);
-                Console.WriteLine("🧹 Cleaned previous test results");
             }
 
             // Update NUnit.runsettings with thread count
@@ -195,7 +194,7 @@ namespace API.Core.Services.OpenAPI
 
             var argumentString = string.Join(" ", arguments);
 
-            Console.WriteLine($"🔧 Command: dotnet {argumentString}");
+            //Console.WriteLine($"🔧 Command: dotnet {argumentString}");
             Console.WriteLine();
 
             var process = new Process
@@ -274,7 +273,7 @@ namespace API.Core.Services.OpenAPI
                 );
 
                 await File.WriteAllTextAsync(settingsPath, updatedContent);
-                Console.WriteLine($"⚙️  Updated NUnit.runsettings: {threads} worker threads");
+                //Console.WriteLine($"⚙️  Updated NUnit.runsettings: {threads} worker threads");
             }
             catch (Exception ex)
             {

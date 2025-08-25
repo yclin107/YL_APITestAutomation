@@ -13,6 +13,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <NoWarn>CS1998;CS8602;CS8604;CS8601;CS8629;CS0168;CS8620;CS0169;CS0108</NoWarn>
 	<EnableDefaultItems>true</EnableDefaultItems>
 	<EnableLongPaths>true</EnableLongPaths>
   </PropertyGroup>

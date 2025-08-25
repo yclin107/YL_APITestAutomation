@@ -25,6 +25,7 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine("using Allure.NUnit.Attributes;");
             sb.AppendLine("using API.Core.Helpers;");
             sb.AppendLine("using System.Net;");
+            sb.AppendLine("using System.Text;");
             sb.AppendLine("using System.Text.Json;");
             sb.AppendLine("using static RestAssured.Dsl;");
             sb.AppendLine("using Newtonsoft.Json.Schema;");
@@ -94,8 +95,7 @@ namespace API.Core.Services.OpenAPI
             
             sb.AppendLine($"        private async Task ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
-            sb.AppendLine("            // Add response as Allure attachment for viewing");
-            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(jsonResponse));");
+            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", Encoding.UTF8.GetBytes(jsonResponse));");
             sb.AppendLine();
             
             // Generate schema JSON from OpenAPI response
@@ -118,9 +118,9 @@ namespace API.Core.Services.OpenAPI
                 // Generate real schema validation
                 sb.AppendLine("            try");
                 sb.AppendLine("            {");
-                sb.AppendLine("                // Add expected schema as Allure attachment");
                 sb.AppendLine($"                var schemaJson = @\"{FormatJsonForCSharp(schemaJson)}\";");
-                sb.AppendLine("                AllureApi.AddAttachment(\"Expected Schema\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(schemaJson));");
+                sb.AppendLine();
+                sb.AppendLine("                AllureApi.AddAttachment(\"Expected Schema\", \"application/json\", Encoding.UTF8.GetBytes(schemaJson));");
                 sb.AppendLine();
                 sb.AppendLine("                var schema = await NJsonSchema.JsonSchema.FromJsonAsync(schemaJson);");
                 sb.AppendLine("                var validator = new JsonSchemaValidator();");
@@ -130,14 +130,13 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("                {");
                 sb.AppendLine("                    var errorMessages = errors.Select(e => $\"{e.Path}: {e.Kind} - {e.Property}\");");
                 sb.AppendLine("                    var allErrors = string.Join(\", \", errorMessages);");
-                sb.AppendLine("                    Console.WriteLine($\"❌ Schema validation failed for {endpointInfo}. Errors: {allErrors}\");");
-                sb.AppendLine("                    Console.WriteLine($\"📋 Expected schema type: object with specific properties\");");
-                sb.AppendLine("                    Console.WriteLine($\"📋 Actual response: {(jsonResponse.Length > 200 ? jsonResponse.Substring(0, 200) + \"...\" : jsonResponse)}\");");
+                //sb.AppendLine("                    Console.WriteLine($\"📋 Expected schema type: object with specific properties\");");
+                //sb.AppendLine("                    Console.WriteLine($\"📋 Actual response: {(jsonResponse.Length > 200 ? jsonResponse.Substring(0, 200) + \"...\" : jsonResponse)}\");");
                 sb.AppendLine("                    Assert.Fail($\"Response schema validation failed. Errors: {allErrors}\");");
                 sb.AppendLine("                }");
                 sb.AppendLine("                else");
                 sb.AppendLine("                {");
-                sb.AppendLine($"                    Console.WriteLine(\"✅ Schema validation passed for {endpointInfo}\");");
+                //sb.AppendLine($"                    Console.WriteLine(\"✅ Schema validation passed\");");
                 if (schemaJson.Contains("too complex") || schemaJson.Contains("Simplified schema") || schemaJson.Contains("Memory allocation error"))
                 {
                     sb.AppendLine("                    // NOTE: Schema was simplified due to complexity - consider manual validation for critical fields");
@@ -146,7 +145,7 @@ namespace API.Core.Services.OpenAPI
                 sb.AppendLine("            }");
                 sb.AppendLine("            catch (Exception ex)");
                 sb.AppendLine("            {");
-                sb.AppendLine("                Console.WriteLine($\"❌ Schema validation exception for {endpointInfo}: {ex.Message}\");");
+                //sb.AppendLine("                Console.WriteLine($\"❌ Schema validation exception: {ex.Message}\");");
                 sb.AppendLine("                Assert.Fail($\"Schema validation error: {ex.Message}\");");
                 sb.AppendLine("            }");
             }
@@ -154,18 +153,18 @@ namespace API.Core.Services.OpenAPI
             {
                 // Generate basic validation as fallback
                 sb.AppendLine("            // Basic validation - ensure response is valid JSON");
-                sb.AppendLine($"            // NOTE: Schema was simplified due to complexity for {endpointInfo}");
+                sb.AppendLine($"            // NOTE: Schema was simplified due to complexity");
                 sb.AppendLine("            try");
                 sb.AppendLine("            {");
                 sb.AppendLine("                // Validate JSON structure");
                 sb.AppendLine("                JsonDocument.Parse(jsonResponse);");
                 sb.AppendLine("                Assert.That(string.IsNullOrEmpty(jsonResponse), Is.False, \"Response should not be empty\");");
                 sb.AppendLine("                Console.WriteLine($\"📋 Actual response: {(jsonResponse.Length > 200 ? jsonResponse.Substring(0, 200) + \"...\" : jsonResponse)}\");");
-                sb.AppendLine($"                Console.WriteLine(\"⚠️  Basic validation only for {endpointInfo} - schema was simplified\");");
+                sb.AppendLine($"                Console.WriteLine(\"⚠️  Basic validation - schema was simplified\");");
                 sb.AppendLine("            }");
                 sb.AppendLine("            catch (JsonException ex)");
                 sb.AppendLine("            {");
-                sb.AppendLine("                Console.WriteLine($\"❌ Invalid JSON for {endpointInfo}: {ex.Message}\");");
+                sb.AppendLine("                Console.WriteLine($\"❌ Invalid JSON: {ex.Message}\");");
                 sb.AppendLine("                Assert.Fail($\"Response is not valid JSON: {ex.Message}\");");
                 sb.AppendLine("            }");
             }
@@ -178,8 +177,7 @@ namespace API.Core.Services.OpenAPI
         {
             sb.AppendLine($"        private void ValidateResponseSchema_{methodName}(string jsonResponse)");
             sb.AppendLine("        {");
-            sb.AppendLine("            // Add response as Allure attachment for viewing");
-            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(jsonResponse));");
+            sb.AppendLine("            AllureApi.AddAttachment(\"Actual Response\", \"application/json\", Encoding.UTF8.GetBytes(jsonResponse));");
             sb.AppendLine();
             sb.AppendLine("            // Basic validation - ensure response is valid JSON");
             sb.AppendLine("            try");
@@ -833,22 +831,21 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine($"            AllureApi.Step(\"Get & Attach Schema Validation Response\", () =>");
             sb.AppendLine("            {");
             sb.AppendLine($"                AttachResponse(\"{methodName}SchemaValidationResponse\", rawJson);");
-            sb.AppendLine("                // Also add as step attachment for direct viewing");
-            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(rawJson));");
+            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", Encoding.UTF8.GetBytes(rawJson));");
             sb.AppendLine("            });");
             sb.AppendLine();
             
             sb.AppendLine("            AllureApi.Step(\"Validate response schema\", () =>");
             sb.AppendLine("            {");
-            sb.AppendLine("                if (response.Extract().Response().IsSuccessStatusCode)");
-            sb.AppendLine("                {");
-            sb.AppendLine($"                    ValidateResponseSchema_{SanitizeIdentifier(endpoint.Method + "_" + endpoint.Path)}(rawJson).Wait();");
-            sb.AppendLine("                }");
-            sb.AppendLine("                else");
-            sb.AppendLine("                {");
-            sb.AppendLine("                    Assert.That(string.IsNullOrEmpty(rawJson), Is.False, \"Response should not be empty even for error responses\");");
-            sb.AppendLine("                    Console.WriteLine($\"⚠️  Non-success response received: {response.Extract().Response().StatusCode}\");");
-            sb.AppendLine("                }");
+            //sb.AppendLine("                if (response.Extract().Response().IsSuccessStatusCode)");
+            //sb.AppendLine("                {");
+            sb.AppendLine($"               ValidateResponseSchema_{SanitizeIdentifier(endpoint.Method + "_" + endpoint.Path)}(rawJson).Wait();");
+            //sb.AppendLine("                }");
+            //sb.AppendLine("                else");
+            //sb.AppendLine("                {");
+            //sb.AppendLine("                    Assert.That(string.IsNullOrEmpty(rawJson), Is.False, \"Response should not be empty even for error responses\");");
+            //sb.AppendLine("                    Console.WriteLine($\"⚠️  Non-success response received: {response.Extract().Response().StatusCode}\");");
+            //sb.AppendLine("                }");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();

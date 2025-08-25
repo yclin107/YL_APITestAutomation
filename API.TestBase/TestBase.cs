@@ -95,7 +95,7 @@ namespace API.TestBase
                 }
                 
                 // Log which user is being used for this thread
-                Console.WriteLine($"🧵 Process {processId} Thread {threadId}: Using user {user.LoginId}");
+                Console.WriteLine($"🧵 Thread {threadId}: Using user {user.LoginId}");
                 
                 return new TestContext
                 {
