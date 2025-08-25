@@ -890,6 +890,14 @@ namespace API.Core.Services.OpenAPI
         {
             try
             {
+                // First try to get the actual OpenAPI request body from the document
+                var actualRequestBody = GetActualRequestBodyFromDocument(endpoint, spec);
+                if (actualRequestBody != null)
+                {
+                    return actualRequestBody;
+                }
+
+                // Fallback to endpoint request body if available
                 if (endpoint.RequestBody?.Content == null)
                 {
                     return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
@@ -899,24 +907,24 @@ namespace API.Core.Services.OpenAPI
                 var jsonContent = endpoint.RequestBody.Content.FirstOrDefault(c => 
                     c.Key.Contains("application/json", StringComparison.OrdinalIgnoreCase));
                 
-                if (jsonContent.Key == null || jsonContent.Value?.Schema == null)
+                if (jsonContent.Key != null && jsonContent.Value?.Schema != null)
                 {
-                    return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
-                }
-
-                var schema = jsonContent.Value.Schema;
-                
-                // Handle schema references
-                if (schema.Reference != null)
-                {
-                    var resolvedSchema = ResolveSchemaReference(schema.Reference, spec);
-                    if (resolvedSchema != null)
+                    var schema = jsonContent.Value.Schema;
+                    
+                    // Handle schema references
+                    if (schema.Reference != null)
                     {
-                        schema = resolvedSchema;
+                        var resolvedSchema = ResolveSchemaReference(schema.Reference, spec);
+                        if (resolvedSchema != null)
+                        {
+                            schema = resolvedSchema;
+                        }
                     }
+
+                    return GenerateRequestBodyFromSchema(schema);
                 }
 
-                return GenerateRequestBodyFromSchema(schema);
+                return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
             }
             catch (Exception ex)
             {
