@@ -872,15 +872,7 @@ namespace API.Core.Services.OpenAPI
             
             sb.AppendLine("            AllureApi.Step(\"Validate response schema\", () =>");
             sb.AppendLine("            {");
-            //sb.AppendLine("                if (response.Extract().Response().IsSuccessStatusCode)");
-            //sb.AppendLine("                {");
             sb.AppendLine($"               ValidateResponseSchema_{SanitizeIdentifier(endpoint.Method + "_" + endpoint.Path)}(rawJson).Wait();");
-            //sb.AppendLine("                }");
-            //sb.AppendLine("                else");
-            //sb.AppendLine("                {");
-            //sb.AppendLine("                    Assert.That(string.IsNullOrEmpty(rawJson), Is.False, \"Response should not be empty even for error responses\");");
-            //sb.AppendLine("                    Console.WriteLine($\"⚠️  Non-success response received: {response.Extract().Response().StatusCode}\");");
-            //sb.AppendLine("                }");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -1122,97 +1114,6 @@ namespace API.Core.Services.OpenAPI
                 "string" when schema.Format == "date-time" => "DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\")",
                 "string" when schema.Format == "date" => "DateTime.Now.ToString(\"yyyy-MM-dd\")",
                 "string" => $"\"test-{propertyName.ToLower()}\"",
-                "integer" => "123",
-                "number" => "123.45",
-                "boolean" => "true",
-                "array" => "new[] { \"test-item\" }",
-                _ => $"\"test-{propertyName.ToLower()}\""
-            };
-        }
-
-        private static string? GetActualRequestBodyFromDocument(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
-        {
-            try
-            {
-                // Find the actual path and operation in the OpenAPI document
-                var pathItem = spec.Document.Paths.FirstOrDefault(p => p.Key == endpoint.Path);
-                if (pathItem.Value == null) return null;
-
-                var operation = pathItem.Value.Operations.FirstOrDefault(o => 
-                    o.Key.ToString().Equals(endpoint.Method, StringComparison.OrdinalIgnoreCase));
-                if (operation.Value?.RequestBody == null) return null;
-
-                var requestBody = operation.Value.RequestBody;
-                
-                // Look for application/json content
-                var jsonContent = requestBody.Content?.FirstOrDefault(c => 
-                    c.Key.Contains("application/json", StringComparison.OrdinalIgnoreCase));
-                
-                if (jsonContent?.Value == null) return null;
-
-                var mediaType = jsonContent.Value.Value;
-                
-                // First try to get example
-                if (mediaType.Example != null)
-                {
-                    return ConvertOpenApiValueToCSharp(mediaType.Example);
-                }
-                
-                // Try examples collection
-                if (mediaType.Examples?.Any() == true)
-                {
-                    var firstExample = mediaType.Examples.First().Value;
-                    if (firstExample.Value != null)
-                    {
-                        return ConvertOpenApiValueToCSharp(firstExample.Value);
-                    }
-                }
-                
-                // Fallback to schema-based generation
-                if (mediaType.Schema != null)
-                {
-                    return GenerateRequestBodyFromSchema(mediaType.Schema);
-                }
-                
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️  Error extracting request body for {endpoint.Method} {endpoint.Path}: {ex.Message}");
-                return null;
-            }
-        }
-
-        private static string ConvertOpenApiValueToCSharpValue(Microsoft.OpenApi.Any.IOpenApiAny value)
-        {
-            return value switch
-            {
-                Microsoft.OpenApi.Any.OpenApiString str => $"\"{str.Value}\"",
-                Microsoft.OpenApi.Any.OpenApiInteger intVal => intVal.Value.ToString(),
-                Microsoft.OpenApi.Any.OpenApiLong longVal => longVal.Value.ToString(),
-                Microsoft.OpenApi.Any.OpenApiFloat floatVal => floatVal.Value.ToString("F2"),
-                Microsoft.OpenApi.Any.OpenApiDouble doubleVal => doubleVal.Value.ToString("F2"),
-                Microsoft.OpenApi.Any.OpenApiBoolean boolVal => boolVal.Value.ToString().ToLower(),
-                Microsoft.OpenApi.Any.OpenApiDateTime dateVal => $"DateTime.Parse(\"{dateVal.Value:yyyy-MM-ddTHH:mm:ssZ}\")",
-                Microsoft.OpenApi.Any.OpenApiObject obj => ConvertOpenApiValueToCSharp(obj),
-                Microsoft.OpenApi.Any.OpenApiArray arr => ConvertOpenApiValueToCSharp(arr),
-                _ => "\"test-value\""
-            };
-        }
-
-        private static string GenerateValueFromSchema(OpenApiSchema schema, string propertyName)
-        {
-            var type = schema.Type?.ToLower();
-            
-            return type switch
-            {
-                "string" => schema.Format?.ToLower() switch
-                {
-                    "date" => "DateTime.Now.ToString(\"yyyy-MM-dd\")",
-                    "date-time" => "DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\")",
-                    "uuid" => "Guid.NewGuid().ToString()",
-                    _ => $"\"test-{propertyName.ToLower()}\""
-                },
                 "integer" => "123",
                 "number" => "123.45",
                 "boolean" => "true",
