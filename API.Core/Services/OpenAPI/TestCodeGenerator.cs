@@ -915,25 +915,32 @@ namespace API.Core.Services.OpenAPI
                     var resolvedSchema = ResolveSchemaReference(schema.Reference, spec);
                     if (resolvedSchema != null)
                     {
-                // Look for JSON content types in order of preference
-                var contentTypes = new[] { "application/json", "text/json", "application/*+json" };
-                
-                foreach (var contentType in contentTypes)
-
-                    if (endpoint.RequestBody.Content?.ContainsKey(contentType) == true)
-                    {
-                        var mediaType = endpoint.RequestBody.Content[contentType];
-                        if (mediaType?.Schema != null)
-                        {
-                            return GenerateRequestBodyFromSchema(mediaType.Schema, spec);
-                        }
-                        
-                        // If no schema but has example, use the example
-                        if (mediaType?.Example != null)
-                        {
-                            return GenerateRequestBodyFromExample(mediaType.Example);
-                        }
+                        schema = resolvedSchema;
                     }
+                }
+                
+                return GenerateRequestBodyFromSchema(schema, spec);
+            }
+            
+            // Look for JSON content types in order of preference
+            var contentTypes = new[] { "application/json", "text/json", "application/*+json" };
+            
+            foreach (var contentType in contentTypes)
+            {
+                if (endpoint.RequestBody.Content?.ContainsKey(contentType) == true)
+                {
+                    var mediaType = endpoint.RequestBody.Content[contentType];
+                    if (mediaType?.Schema != null)
+                    {
+                        return GenerateRequestBodyFromSchema(mediaType.Schema, spec);
+                    }
+                    
+                    // If no schema but has example, use the example
+                    if (mediaType?.Example != null)
+                    {
+                        return GenerateRequestBodyFromExample(mediaType.Example);
+                    }
+                }
             }
             
             // Fallback to generic request body
@@ -1050,17 +1057,9 @@ namespace API.Core.Services.OpenAPI
         private static string SanitizeIdentifier(string identifier)
         {
             if (string.IsNullOrEmpty(identifier))
-                // Handle $ref references
-                if (!string.IsNullOrEmpty(schema.Reference?.Id))
-                {
-                    var referencedSchema = ResolveSchemaReference(schema.Reference.Id, spec);
-                    if (referencedSchema != null)
-                    {
-                        schema = referencedSchema;
-                    }
-                }
-                
+            {
                 return "Unknown";
+            }
                 
             // Remove or replace invalid characters for C# identifiers
             var sanitized = identifier
