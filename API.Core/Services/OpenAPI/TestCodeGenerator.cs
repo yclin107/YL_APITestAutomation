@@ -593,7 +593,7 @@ namespace API.Core.Services.OpenAPI
             {
                 sb.AppendLine("                    .OAuth2(token)");
                 sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.TenantId)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.InstanceId)");
             }
             
             // Add parameters
@@ -735,7 +735,7 @@ namespace API.Core.Services.OpenAPI
             {
                 sb.AppendLine("                    .OAuth2(token)");
                 sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.TenantId)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.InstanceId)");
             }
             
             // Handle path parameters in URL (still need these for the URL to be valid)
@@ -792,7 +792,7 @@ namespace API.Core.Services.OpenAPI
             {
                 sb.AppendLine("                    .OAuth2(token)");
                 sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.TenantId)");
+                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.InstanceId)");
             }
             
             // Add required parameters with test values

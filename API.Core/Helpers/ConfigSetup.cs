@@ -59,6 +59,7 @@ namespace API.Core.Helpers
                 ProformaApiUrl = tenatConfig.ProformaApiUrl,
                 OAuthScope = tenatConfig.OAuthScope ?? Array.Empty<string>(),
                 TenantId = tenatConfig.TenantId,
+                InstanceId = tenatConfig.InstanceId,
                 AppId = tenatConfig.AppId,
                 PPSScope = tenatConfig.PPSScope,
                 RedirectUri = tenatConfig.RedirectUri
@@ -138,6 +139,7 @@ namespace API.Core.Helpers
             public string ProformaApiUrl { get; set; } = string.Empty;
             public string[] OAuthScope { get; set; } = [];
             public string TenantId { get; set; } = string.Empty;
+            public string InstanceId { get; set; } = string.Empty;
             public string AppId { get; set; } = string.Empty;
             public string RedirectUri { get; set; } = string.Empty;
             public string PPSScope { get; set; } = string.Empty;

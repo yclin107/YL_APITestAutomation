@@ -100,6 +100,7 @@ namespace API.TestBase
                 return new TestContext
                 {
                     TenantId = _currentProfile.TenantId,
+                    InstanceId = _currentProfile.InstanceId,
                     UserId = user.LoginId,
                     User = user,
                     Profile = _currentProfile
@@ -190,6 +191,7 @@ namespace API.TestBase
     public class TestContext
     {
         public string TenantId { get; set; } = string.Empty;
+        public string InstanceId { get; set; } = string.Empty;
         public string UserId { get; set; } = string.Empty;
         public UserProfile User { get; set; } = new();
         public TenantProfile Profile { get; set; } = new();

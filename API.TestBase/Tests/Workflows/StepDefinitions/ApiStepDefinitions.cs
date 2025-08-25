@@ -10,15 +10,17 @@ namespace API.TestBase.Tests.Workflows.StepDefinitions
         private string _baseUrl = string.Empty;
         private string _token = string.Empty;
         private string _tenant = string.Empty;
+        private string _instance = string.Empty;
         private string _userId = string.Empty;
         private object? _requestBody;
         private object? _response;
         private string _rawResponse = string.Empty;
         private RestAssured.Response.VerifiableResponse? _validatableResponse;
 
-        public void InitializeContext(string tenant, string userId, string baseUrl)
+        public void InitializeContext(string tenant, string instance, string userId, string baseUrl)
         {
             _tenant = tenant;
+            _instance = instance;
             _userId = userId;
             _baseUrl = baseUrl;
             InitContext(tenant, userId, "BDD API Feature");
@@ -76,7 +78,7 @@ namespace API.TestBase.Tests.Workflows.StepDefinitions
                 var request = Given()
                     .OAuth2(_token)
                     .Header("x-3e-tenantid", _tenant)
-                    .Header("X-3E-InstanceId", _tenant);
+                    .Header("X-3E-InstanceId", _instance);
 
                 // Add query parameters
                 if (queryParams != null)
@@ -115,7 +117,7 @@ namespace API.TestBase.Tests.Workflows.StepDefinitions
                 var request = Given()
                     .OAuth2(_token)
                     .Header("x-3e-tenantid", _tenant)
-                    .Header("X-3E-InstanceId", _tenant);
+                    .Header("X-3E-InstanceId", _instance);
 
                 if (_requestBody != null)
                 {
@@ -150,7 +152,7 @@ namespace API.TestBase.Tests.Workflows.StepDefinitions
                 var request = Given()
                     .OAuth2(_token)
                     .Header("x-3e-tenantid", _tenant)
-                    .Header("X-3E-InstanceId", _tenant);
+                    .Header("X-3E-InstanceId", _instance);
 
                 if (_requestBody != null)
                 {
@@ -185,7 +187,7 @@ namespace API.TestBase.Tests.Workflows.StepDefinitions
                 var request = Given()
                     .OAuth2(_token)
                     .Header("x-3e-tenantid", _tenant)
-                    .Header("X-3E-InstanceId", _tenant);
+                    .Header("X-3E-InstanceId", _instance);
 
                 // Replace path parameters
                 var finalEndpoint = endpoint;

@@ -22,7 +22,7 @@ namespace API.TestBase.Tests.Workflows.Features
         {
             var context = GetTestContext();
             // Initialize context
-            _steps.InitializeContext(context.TenantId, context.UserId, GetBaseUrl());
+            _steps.InitializeContext(context.TenantId, context.InstanceId, context.UserId, GetBaseUrl());
             
             // Authenticate
             _steps.AuthenticateUser();
@@ -67,7 +67,7 @@ namespace API.TestBase.Tests.Workflows.Features
         {
             var context = GetTestContext();
             // Initialize context without authentication
-            _steps.InitializeContext(context.TenantId, context.UserId, GetBaseUrl());
+            _steps.InitializeContext(context.TenantId, context.InstanceId, context.UserId, GetBaseUrl());
             
             // Try to access protected endpoint without auth
             _steps.ExecuteGetRequest("users");

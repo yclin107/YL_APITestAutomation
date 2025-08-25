@@ -10,7 +10,16 @@
   "ProformaApiUrl": "https://proforma.nonprod.elite.com/api/dev/3e/proforma/v1",
   "RedirectUri": "http://localhost:8686/sampleapp/auth",
   "TenantId": "b2c44778-9710-436c-a075-9bcc06e79a1b",
+  "InstanceId": "ptpd68r3nke7q5pnutzaaw",
   "Users": {
+    "PPSAutoTestUser2": {
+      "DefaultTimekeeperIndex": "13591",
+      "DefaultTimekeeperNumber": "PPSAUTO2",
+      "FirstName": "AutoTestUser2",
+      "LastName": "PPS",
+      "LoginId": "PPSAutoTestUser2@h3esharksdev01.onmicrosoft.com",
+      "Password": "PaperlessAutoTest0PWD0"
+    },
     "PPSAutoTestUser0": {
       "DefaultTimekeeperIndex": "3323",
       "DefaultTimekeeperNumber": "19999",
@@ -26,14 +35,6 @@
       "LastName": "PPS",
       "LoginId": "PPSAutoTestUser1@h3esharksdev01.onmicrosoft.com",
       "Password": "AutoTestUser1"
-    },
-    "PPSAutoTestUser2": {
-      "DefaultTimekeeperIndex": "13591",
-      "DefaultTimekeeperNumber": "PPSAUTO2",
-      "FirstName": "AutoTestUser2",
-      "LastName": "PPS",
-      "LoginId": "PPSAutoTestUser2@h3esharksdev01.onmicrosoft.com",
-      "Password": "PaperlessAutoTest0PWD0"
     }
   }
 }

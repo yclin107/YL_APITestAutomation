@@ -315,6 +315,7 @@ namespace API.Core.Helpers
         public string[] OAuthScope { get; set; } = Array.Empty<string>();
         public string PPSScope { get; set; } = string.Empty;
         public string TenantId { get; set; } = string.Empty;
+        public string InstanceId { get; set; } = string.Empty;
         public string RedirectUri { get; set; } = string.Empty;
         public string AppId { get; set; } = string.Empty;
         public string AuthorizationEndpoint { get; set; } = string.Empty;
