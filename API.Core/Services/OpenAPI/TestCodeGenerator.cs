@@ -891,7 +891,7 @@ namespace API.Core.Services.OpenAPI
 
         private static string GenerateRequestBodyFromOpenApi(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
         {
-            if (endpoint.RequestBody == null || !endpoint.RequestBody.Required)
+            try
             {
                 if (endpoint.RequestBody?.Content == null)
                 {
@@ -918,100 +918,17 @@ namespace API.Core.Services.OpenAPI
                         schema = resolvedSchema;
                     }
                 }
-                
-                return GenerateRequestBodyFromSchema(schema, spec);
-            }
-            
-            // Look for JSON content types in order of preference
-            var contentTypes = new[] { "application/json", "text/json", "application/*+json" };
-            
-            foreach (var contentType in contentTypes)
-            {
-                if (endpoint.RequestBody.Content?.ContainsKey(contentType) == true)
-                {
-                    var mediaType = endpoint.RequestBody.Content[contentType];
-                    if (mediaType?.Schema != null)
-                    {
-                        return GenerateRequestBodyFromSchema(mediaType.Schema, spec);
-                    }
-                    
-                    // If no schema but has example, use the example
-                    if (mediaType?.Example != null)
-                    {
-                        return GenerateRequestBodyFromExample(mediaType.Example);
-                    }
-                }
-            }
-            
-            // Fallback to generic request body
-            return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
-        }
-        
-        private static string GenerateRequestBodyFromExample(object example)
-        {
-            try
-            {
-                if (example != null)
-                {
-                    var exampleJson = example.ToString();
-                    if (!string.IsNullOrEmpty(exampleJson) && exampleJson.StartsWith("{"))
-                    {
-                        // Parse the example JSON and convert to C# object syntax
-                        var jsonDoc = JsonDocument.Parse(exampleJson);
-                        var properties = new List<string>();
-                        
-                        foreach (var prop in jsonDoc.RootElement.EnumerateObject())
-                        {
-                            var value = prop.Value.ValueKind switch
-                            {
-                                JsonValueKind.String => $"\"{prop.Value.GetString()}\"",
-                                JsonValueKind.Number => prop.Value.GetRawText(),
-                                JsonValueKind.True => "true",
-                                JsonValueKind.False => "false",
-                                JsonValueKind.Null => "null",
-                                _ => $"\"{prop.Value.GetRawText()}\""
-                            };
-                            properties.Add($"{prop.Name} = {value}");
-                        }
-                        
-                        if (properties.Any())
-                        {
-                            return $"new {{ {string.Join(", ", properties)} }}";
-                        }
-                    }
-                }
+
+                return GenerateRequestBodyFromSchema(schema);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️  Error processing example: {ex.Message}");
+                Console.WriteLine($"⚠️  Error generating request body: {ex.Message}");
+                return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
             }
-            
-            return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
-        }
-        
-        private static OpenApiSchema? ResolveSchemaReference(string referenceId, OpenApiTestSpec spec)
-        {
-            try
-            {
-                // Handle references like "#/components/schemas/TextDifferencesRequest"
-                if (referenceId.StartsWith("#/components/schemas/"))
-                {
-                    var schemaName = referenceId.Replace("#/components/schemas/", "");
-                    if (spec.Document.Components?.Schemas?.ContainsKey(schemaName) == true)
-                    {
-                        return spec.Document.Components.Schemas[schemaName];
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️  Error resolving schema reference {referenceId}: {ex.Message}");
-            }
-            
-            return null;
         }
 
-        private static string GenerateRequestBodyFromSchema(OpenApiSchema schema, OpenApiTestSpec spec)
+        private static string GenerateRequestBodyFromSchema(OpenApiSchema schema)
         {
             var properties = new List<string>();
 
@@ -1057,9 +974,7 @@ namespace API.Core.Services.OpenAPI
         private static string SanitizeIdentifier(string identifier)
         {
             if (string.IsNullOrEmpty(identifier))
-            {
                 return "Unknown";
-            }
                 
             // Remove or replace invalid characters for C# identifiers
             var sanitized = identifier
