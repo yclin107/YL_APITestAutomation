@@ -891,7 +891,7 @@ namespace API.Core.Services.OpenAPI
             try
             {
                 // First try to get the actual OpenAPI request body from the document
-                var actualRequestBody = GetActualRequestBodyFromDocument(endpoint, spec);
+                var actualRequestBody = GetActualRequestBodyFromDocument(spec, endpoint);
                 if (actualRequestBody != null)
                 {
                     return actualRequestBody;
@@ -931,6 +931,203 @@ namespace API.Core.Services.OpenAPI
                 Console.WriteLine($"⚠️  Error generating request body: {ex.Message}");
                 return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
             }
+        }
+
+        private static string GetActualRequestBodyFromDocument(OpenApiTestSpec spec, OpenApiEndpointTest endpoint)
+        {
+            try
+            {
+                // Find the path in the OpenAPI document
+                var pathItem = spec.Document.Paths.FirstOrDefault(p => p.Key == endpoint.Path);
+                if (pathItem.Value == null) return null;
+
+                // Find the operation (GET, POST, etc.)
+                var operation = pathItem.Value.Operations.FirstOrDefault(o => 
+                    o.Key.ToString().Equals(endpoint.Method, StringComparison.OrdinalIgnoreCase));
+                if (operation.Value?.RequestBody == null) return null;
+
+                var requestBody = operation.Value.RequestBody;
+
+                // Look for application/json content
+                var jsonContent = requestBody.Content?.FirstOrDefault(c => 
+                    c.Key.Contains("application/json", StringComparison.OrdinalIgnoreCase));
+                
+                if (!jsonContent.HasValue) return null;
+
+                var mediaType = jsonContent.Value.Value;
+                
+                // First, try to get example
+                if (mediaType.Example != null)
+                {
+                    return ConvertOpenApiValueToCSharp(mediaType.Example);
+                }
+
+                // Then try examples collection
+                if (mediaType.Examples?.Any() == true)
+                {
+                    var firstExample = mediaType.Examples.First().Value;
+                    if (firstExample.Value != null)
+                    {
+                        return ConvertOpenApiValueToCSharp(firstExample.Value);
+                    }
+                }
+
+                // Finally, try to generate from schema
+                if (mediaType.Schema != null)
+                {
+                    return GenerateRequestBodyFromSchema(mediaType.Schema);
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Error extracting request body for {endpoint.Method} {endpoint.Path}: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static string ConvertOpenApiValueToCSharp(Microsoft.OpenApi.Any.IOpenApiAny openApiValue)
+        {
+            try
+            {
+                if (openApiValue is Microsoft.OpenApi.Any.OpenApiObject obj)
+                {
+                    var properties = new List<string>();
+                    foreach (var prop in obj)
+                    {
+                        var value = ConvertOpenApiValueToString(prop.Value);
+                        properties.Add($"{prop.Key} = {value}");
+                    }
+                    return "new { " + string.Join(", ", properties) + " }";
+                }
+                else if (openApiValue is Microsoft.OpenApi.Any.OpenApiString str)
+                {
+                    // If it's a JSON string, try to parse it
+                    try
+                    {
+                        var jsonDoc = System.Text.Json.JsonDocument.Parse(str.Value);
+                        return ConvertJsonElementToCSharp(jsonDoc.RootElement);
+                    }
+                    catch
+                    {
+                        return $"new {{ value = \"{str.Value}\" }}";
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Error converting OpenAPI value: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static string ConvertOpenApiValueToString(Microsoft.OpenApi.Any.IOpenApiAny value)
+        {
+            return value switch
+            {
+                Microsoft.OpenApi.Any.OpenApiString s => $"\"{s.Value}\"",
+                Microsoft.OpenApi.Any.OpenApiInteger i => i.Value.ToString(),
+                Microsoft.OpenApi.Any.OpenApiLong l => l.Value.ToString(),
+                Microsoft.OpenApi.Any.OpenApiFloat f => f.Value.ToString("F2"),
+                Microsoft.OpenApi.Any.OpenApiDouble d => d.Value.ToString("F2"),
+                Microsoft.OpenApi.Any.OpenApiBoolean b => b.Value.ToString().ToLower(),
+                Microsoft.OpenApi.Any.OpenApiArray arr => "new[] { " + string.Join(", ", arr.Select(ConvertOpenApiValueToString)) + " }",
+                Microsoft.OpenApi.Any.OpenApiObject obj => "new { " + string.Join(", ", obj.Select(kv => $"{kv.Key} = {ConvertOpenApiValueToString(kv.Value)}")) + " }",
+                _ => "\"test-value\""
+            };
+        }
+
+        private static string ConvertJsonElementToCSharp(System.Text.Json.JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case System.Text.Json.JsonValueKind.Object:
+                    var properties = new List<string>();
+                    foreach (var prop in element.EnumerateObject())
+                    {
+                        var value = ConvertJsonElementToCSharp(prop.Value);
+                        properties.Add($"{prop.Name} = {value}");
+                    }
+                    return "new { " + string.Join(", ", properties) + " }";
+
+                case System.Text.Json.JsonValueKind.Array:
+                    var items = new List<string>();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        items.Add(ConvertJsonElementToCSharp(item));
+                    }
+                    return "new[] { " + string.Join(", ", items) + " }";
+
+                case System.Text.Json.JsonValueKind.String:
+                    return $"\"{element.GetString()}\"";
+
+                case System.Text.Json.JsonValueKind.Number:
+                    return element.TryGetInt32(out var intVal) ? intVal.ToString() : element.GetDouble().ToString("F2");
+
+                case System.Text.Json.JsonValueKind.True:
+                    return "true";
+
+                case System.Text.Json.JsonValueKind.False:
+                    return "false";
+
+                case System.Text.Json.JsonValueKind.Null:
+                    return "null";
+
+                default:
+                    return "\"test-value\"";
+            }
+        }
+
+        private static string GenerateRequestBodyFromSchema(Microsoft.OpenApi.Models.OpenApiSchema schema)
+        {
+            try
+            {
+                if (schema.Properties?.Any() == true)
+                {
+                    var properties = new List<string>();
+                    foreach (var prop in schema.Properties)
+                    {
+                        var value = GenerateValueFromSchema(prop.Value, prop.Key);
+                        properties.Add($"{prop.Key} = {value}");
+                    }
+                    return "new { " + string.Join(", ", properties) + " }";
+                }
+
+                return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Error generating from schema: {ex.Message}");
+                return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
+            }
+        }
+
+        private static string GenerateValueFromSchema(Microsoft.OpenApi.Models.OpenApiSchema schema, string propertyName)
+        {
+            if (schema == null) return "\"test-value\"";
+
+            // Check for examples first
+            if (schema.Example != null)
+            {
+                return ConvertOpenApiValueToString(schema.Example);
+            }
+
+            // Generate based on type
+            return schema.Type?.ToLower() switch
+            {
+                "string" when schema.Format == "uuid" => "Guid.NewGuid().ToString()",
+                "string" when schema.Format == "date-time" => "DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\")",
+                "string" when schema.Format == "date" => "DateTime.Now.ToString(\"yyyy-MM-dd\")",
+                "string" => $"\"test-{propertyName.ToLower()}\"",
+                "integer" => "123",
+                "number" => "123.45",
+                "boolean" => "true",
+                "array" => "new[] { \"test-item\" }",
+                _ => $"\"test-{propertyName.ToLower()}\""
+            };
         }
 
         private static string? GetActualRequestBodyFromDocument(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
@@ -986,37 +1183,6 @@ namespace API.Core.Services.OpenAPI
             }
         }
 
-        private static string ConvertOpenApiValueToCSharp(Microsoft.OpenApi.Any.IOpenApiAny openApiValue)
-        {
-            try
-            {
-                if (openApiValue is Microsoft.OpenApi.Any.OpenApiObject obj)
-                {
-                    var properties = new List<string>();
-                    foreach (var prop in obj)
-                    {
-                        var value = ConvertOpenApiValueToCSharpValue(prop.Value);
-                        properties.Add($"{prop.Key} = {value}");
-                    }
-                    return $"new {{ {string.Join(", ", properties)} }}";
-                }
-                else if (openApiValue is Microsoft.OpenApi.Any.OpenApiArray arr)
-                {
-                    var items = arr.Select(item => ConvertOpenApiValueToCSharpValue(item));
-                    return $"new[] {{ {string.Join(", ", items)} }}";
-                }
-                else
-                {
-                    return ConvertOpenApiValueToCSharpValue(openApiValue);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️  Error converting OpenAPI value: {ex.Message}");
-                return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
-            }
-        }
-
         private static string ConvertOpenApiValueToCSharpValue(Microsoft.OpenApi.Any.IOpenApiAny value)
         {
             return value switch
@@ -1032,28 +1198,6 @@ namespace API.Core.Services.OpenAPI
                 Microsoft.OpenApi.Any.OpenApiArray arr => ConvertOpenApiValueToCSharp(arr),
                 _ => "\"test-value\""
             };
-        }
-
-        private static string GenerateRequestBodyFromSchema(OpenApiSchema schema)
-        {
-            var properties = new List<string>();
-
-            if (schema.Properties?.Any() == true)
-            {
-                foreach (var prop in schema.Properties.Take(10)) // Limit to 10 properties
-                {
-                    var value = GenerateValueFromSchema(prop.Value, prop.Key);
-                    properties.Add($"{prop.Key} = {value}");
-                }
-            }
-            else
-            {
-                // Fallback for schemas without properties
-                properties.Add("testProperty = \"testValue\"");
-                properties.Add("id = Guid.NewGuid().ToString()");
-            }
-
-            return $"new {{ {string.Join(", ", properties)} }}";
         }
 
         private static string GenerateValueFromSchema(OpenApiSchema schema, string propertyName)
