@@ -184,8 +184,8 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine("            {");
             sb.AppendLine("                JsonDocument.Parse(jsonResponse);");
             sb.AppendLine("                Assert.That(string.IsNullOrEmpty(jsonResponse), Is.False, \"Response should not be empty\");");
-            sb.AppendLine("            }");
                 sb.AppendLine("                Console.WriteLine($\"📋 Response content: {(jsonResponse.Length > 200 ? jsonResponse.Substring(0, 200) + \"...\" : jsonResponse)}\");");
+            sb.AppendLine("            }");
             sb.AppendLine("            catch (JsonException ex)");
             sb.AppendLine("            {");
                 sb.AppendLine("                Console.WriteLine($\"❌ Invalid JSON response: {ex.Message}\");");
@@ -534,7 +534,7 @@ namespace API.Core.Services.OpenAPI
             var methodName = SanitizeIdentifier(endpoint.OperationId);
             
             // Generate positive test following the existing pattern
-            GeneratePositiveTestWithAllurePattern(sb, endpoint, methodName, sanitizedTag);
+            GeneratePositiveTestWithAllurePattern(sb, endpoint, spec, methodName, sanitizedTag);
             
             // Generate unauthorized test for all endpoints (as requested)
             if (endpoint.RequiresAuth || forceUnauthorizedTest)
@@ -550,11 +550,11 @@ namespace API.Core.Services.OpenAPI
             // Generate schema validation test if response has schema
             if (endpoint.Responses.ContainsKey("200") || endpoint.Responses.ContainsKey("201"))
             {
-                GenerateSchemaValidationTestWithAllurePattern(sb, endpoint, methodName, sanitizedTag);
+                GenerateSchemaValidationTestWithAllurePattern(sb, endpoint, spec, methodName, sanitizedTag);
             }
         }
 
-        private static void GeneratePositiveTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
+        private static void GeneratePositiveTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine($"        [Category(\"{tag}\")]");
@@ -571,12 +571,13 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine("            var baseUrl = GetBaseUrl();");
             sb.AppendLine();
 
-            // Generate request body if needed
+            // Generate request body from OpenAPI spec if needed
             if (endpoint.RequestBody != null)
             {
-                sb.AppendLine("            var requestBody = GenerateTestRequestBody();");
+                var requestBodyJson = GenerateRequestBodyFromOpenApi(endpoint, spec);
+                sb.AppendLine($"            var requestBody = {requestBodyJson};");
                 sb.AppendLine();
-                sb.AppendLine("            AllureApi.Step(\"Generate & Attach Request Body\", () =>");
+                sb.AppendLine("            AllureApi.Step(\"Attach Request Body\", () =>");
                 sb.AppendLine("            {");
                 sb.AppendLine("                string requestBodyJson = serializeToJson(requestBody);");
                 sb.AppendLine($"                AttachResponse(\"{methodName}Request\", requestBodyJson);");
@@ -592,20 +593,38 @@ namespace API.Core.Services.OpenAPI
             if (endpoint.RequiresAuth)
             {
                 sb.AppendLine("                    .OAuth2(token)");
-                sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.InstanceId)");
             }
             
-            // Add parameters
-            foreach (var param in endpoint.Parameters.Where(p => p.Required))
+            // Add headers from OpenAPI spec
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Header))
             {
-                if (param.In == ParameterLocation.Query)
+                if (param.Name.Equals("X-3E-UserId", StringComparison.OrdinalIgnoreCase))
+                {
+                    sb.AppendLine("                    .Header(\"X-3E-UserId\", context.UserId)");
+                }
+                else if (param.Name.Equals("X-3E-InstanceId", StringComparison.OrdinalIgnoreCase))
+                {
+                    sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.InstanceId)");
+                }
+                else if (param.Name.Equals("x-3e-tenantid", StringComparison.OrdinalIgnoreCase))
+                {
+                    sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
+                }
+                else if (!param.Name.Equals("authorization", StringComparison.OrdinalIgnoreCase))
+                {
+                    var headerValue = param.Required ? 
+                        $"GetTestValue(\"{param.Schema?.Type ?? "string"}\")" : 
+                        $"GetTestValue(\"{param.Schema?.Type ?? "string"}\")";
+                    sb.AppendLine($"                    .Header(\"{param.Name}\", {headerValue})");
+                }
+            }
+            
+            // Add query parameters
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Query))
+            {
+                if (param.Required)
                 {
                     sb.AppendLine($"                    .QueryParam(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
-                }
-                else if (param.In == ParameterLocation.Header && param.Name.ToLower() != "authorization")
-                {
-                    sb.AppendLine($"                    .Header(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
                 }
             }
             
@@ -760,7 +779,7 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine();
         }
 
-        private static void GenerateSchemaValidationTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, string methodName, string tag)
+        private static void GenerateSchemaValidationTestWithAllurePattern(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec, string methodName, string tag)
         {
             sb.AppendLine("        [Test]");
             sb.AppendLine($"        [Category(\"{tag}\")]");
@@ -777,10 +796,11 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine("            var baseUrl = GetBaseUrl();");
             sb.AppendLine();
 
-            // Generate request body if needed
+            // Generate request body from OpenAPI spec if needed
             if (endpoint.RequestBody != null)
             {
-                sb.AppendLine("            var requestBody = GenerateTestRequestBody();");
+                var requestBodyJson = GenerateRequestBodyFromOpenApi(endpoint, spec);
+                sb.AppendLine($"            var requestBody = {requestBodyJson};");
                 sb.AppendLine();
             }
 
@@ -791,20 +811,38 @@ namespace API.Core.Services.OpenAPI
             if (endpoint.RequiresAuth)
             {
                 sb.AppendLine("                    .OAuth2(token)");
-                sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
-                sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.InstanceId)");
             }
             
-            // Add required parameters with test values
-            foreach (var param in endpoint.Parameters.Where(p => p.Required))
+            // Add headers from OpenAPI spec
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Header))
             {
-                if (param.In == ParameterLocation.Query)
+                if (param.Name.Equals("X-3E-UserId", StringComparison.OrdinalIgnoreCase))
+                {
+                    sb.AppendLine("                    .Header(\"X-3E-UserId\", context.UserId)");
+                }
+                else if (param.Name.Equals("X-3E-InstanceId", StringComparison.OrdinalIgnoreCase))
+                {
+                    sb.AppendLine("                    .Header(\"X-3E-InstanceId\", context.InstanceId)");
+                }
+                else if (param.Name.Equals("x-3e-tenantid", StringComparison.OrdinalIgnoreCase))
+                {
+                    sb.AppendLine("                    .Header(\"x-3e-tenantid\", context.TenantId)");
+                }
+                else if (!param.Name.Equals("authorization", StringComparison.OrdinalIgnoreCase))
+                {
+                    var headerValue = param.Required ? 
+                        $"GetTestValue(\"{param.Schema?.Type ?? "string"}\")" : 
+                        $"GetTestValue(\"{param.Schema?.Type ?? "string"}\")";
+                    sb.AppendLine($"                    .Header(\"{param.Name}\", {headerValue})");
+                }
+            }
+            
+            // Add query parameters
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Query))
+            {
+                if (param.Required)
                 {
                     sb.AppendLine($"                    .QueryParam(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
-                }
-                else if (param.In == ParameterLocation.Header && param.Name.ToLower() != "authorization")
-                {
-                    sb.AppendLine($"                    .Header(\"{param.Name}\", GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
                 }
             }
             
@@ -849,6 +887,88 @@ namespace API.Core.Services.OpenAPI
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
+        }
+
+        private static string GenerateRequestBodyFromOpenApi(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
+        {
+            try
+            {
+                if (endpoint.RequestBody?.Content == null)
+                {
+                    return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
+                }
+
+                // Try to find JSON content type
+                var jsonContent = endpoint.RequestBody.Content.FirstOrDefault(c => 
+                    c.Key.Contains("application/json", StringComparison.OrdinalIgnoreCase));
+                
+                if (jsonContent.Key == null || jsonContent.Value?.Schema == null)
+                {
+                    return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
+                }
+
+                var schema = jsonContent.Value.Schema;
+                
+                // Handle schema references
+                if (schema.Reference != null)
+                {
+                    var resolvedSchema = ResolveSchemaReference(schema.Reference, spec);
+                    if (resolvedSchema != null)
+                    {
+                        schema = resolvedSchema;
+                    }
+                }
+
+                return GenerateRequestBodyFromSchema(schema);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️  Error generating request body: {ex.Message}");
+                return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
+            }
+        }
+
+        private static string GenerateRequestBodyFromSchema(OpenApiSchema schema)
+        {
+            var properties = new List<string>();
+
+            if (schema.Properties?.Any() == true)
+            {
+                foreach (var prop in schema.Properties.Take(10)) // Limit to 10 properties
+                {
+                    var value = GenerateValueFromSchema(prop.Value, prop.Key);
+                    properties.Add($"{prop.Key} = {value}");
+                }
+            }
+            else
+            {
+                // Fallback for schemas without properties
+                properties.Add("testProperty = \"testValue\"");
+                properties.Add("id = Guid.NewGuid().ToString()");
+            }
+
+            return $"new {{ {string.Join(", ", properties)} }}";
+        }
+
+        private static string GenerateValueFromSchema(OpenApiSchema schema, string propertyName)
+        {
+            var type = schema.Type?.ToLower();
+            
+            return type switch
+            {
+                "string" => schema.Format?.ToLower() switch
+                {
+                    "date" => "DateTime.Now.ToString(\"yyyy-MM-dd\")",
+                    "date-time" => "DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\")",
+                    "uuid" => "Guid.NewGuid().ToString()",
+                    _ => $"\"test-{propertyName.ToLower()}\""
+                },
+                "integer" => "123",
+                "number" => "123.45",
+                "boolean" => "true",
+                "array" => "new[] { \"test-item\" }",
+                _ => $"\"test-{propertyName.ToLower()}\""
+            };
         }
 
         private static string SanitizeIdentifier(string identifier)
