@@ -131,7 +131,7 @@ namespace API.Core.Services.OpenAPI.Generator
             var parameters = GetDefaultParameters(endpoint);
             if (parameters.Any())
             {
-                sb.AppendLine($"                    {string.Join(",\n                    ", parameters.Select(p => $"{p}: null"))}");
+                sb.AppendLine($"                    {string.Join(",\n                    ", parameters)}");
             }
             
             sb.AppendLine("                );");
@@ -280,20 +280,20 @@ namespace API.Core.Services.OpenAPI.Generator
             {
                 if (param.Name != "X-3E-UserId" && param.Name != "X-3E-InstanceId" && param.Name != "x-3e-tenantid")
                 {
-                    parameters.Add($"{GetParameterName(param.Name)}: GetTestValue(\"{param.Schema?.Type ?? "string"}\")");
+                    parameters.Add($"{GetParameterName(param.Name)}");
                 }
             }
 
             // Add query parameters
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Query))
             {
-                parameters.Add($"{GetParameterName(param.Name)}: GetTestValue(\"{param.Schema?.Type ?? "string"}\")");
+                parameters.Add($"{GetParameterName(param.Name)}");
             }
 
             // Add path parameters
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
             {
-                parameters.Add($"{GetParameterName(param.Name)}: GetTestValue(\"{param.Schema?.Type ?? "string"}\")");
+                parameters.Add($"{GetParameterName(param.Name)}");
             }
 
             return parameters;
