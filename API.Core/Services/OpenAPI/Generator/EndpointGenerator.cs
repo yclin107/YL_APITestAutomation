@@ -71,27 +71,20 @@ namespace API.Core.Services.OpenAPI.Generator
                 else if (param.Name == "X-3E-InstanceId")
                     sb.AppendLine("                .Header(\"X-3E-InstanceId\", _context.InstanceId)");
                 else if (param.Name != "x-3e-tenantid") // Skip duplicate
-                    sb.AppendLine($"                .Header(\"{param.Name}\", {GetParameterName(param.Name)})");
+                    sb.AppendLine($"                .Header(\"{param.Name}\", {GetParameterName(param.Name)} ?? GetConfigValue(\"headers\", \"{param.Name}\"))");
             }
 
             // Add query parameters
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Query))
             {
                 var paramName = GetParameterName(param.Name);
-                if (param.Required)
-                {
-                    sb.AppendLine($"                .QueryParam(\"{param.Name}\", {paramName})");
-                }
-                else
-                {
-                    sb.AppendLine($"                .QueryParam(\"{param.Name}\", {paramName} ?? GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
-                }
+                sb.AppendLine($"                .QueryParam(\"{param.Name}\", {paramName} ?? GetConfigValue(\"queryParams\", \"{param.Name}\"))");
             }
 
             // Add request body if needed
             if (endpoint.Method.ToUpper() == "POST" || endpoint.Method.ToUpper() == "PUT" || endpoint.Method.ToUpper() == "PATCH")
             {
-                sb.AppendLine("                .Body(requestBody)");
+                sb.AppendLine("                .Body(requestBody ?? GetConfigValue(\"requestBodies\", \"default\"))");
             }
 
             sb.AppendLine("                .When()");
@@ -99,7 +92,13 @@ namespace API.Core.Services.OpenAPI.Generator
             // Use string interpolation for path parameters
             if (endpoint.Parameters.Any(p => p.In == ParameterLocation.Path))
             {
-                sb.AppendLine($"                .{GetRestAssuredMethod(endpoint.Method)}($\"{{_baseUrl}}{urlPath}\")");
+                sb.AppendLine($"                .{GetRestAssuredMethod(endpoint.Method)}(BuildUrl(\"{urlPath}\", new Dictionary<string, object?> {{");
+                foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
+                {
+                    var paramName = GetParameterName(param.Name);
+                    sb.AppendLine($"                    {{ \"{param.Name}\", {paramName} ?? GetConfigValue(\"pathParams\", \"{param.Name}\") }},");
+                }
+                sb.AppendLine("                }))");
             }
             else
             {
@@ -135,7 +134,7 @@ namespace API.Core.Services.OpenAPI.Generator
             // Add request body parameter for POST/PUT/PATCH
             if (endpoint.Method.ToUpper() == "POST" || endpoint.Method.ToUpper() == "PUT" || endpoint.Method.ToUpper() == "PATCH")
             {
-                parameters.Add("object requestBody");
+                parameters.Add("object? requestBody = null");
             }
 
             // Add header parameters (except special ones)
@@ -144,8 +143,7 @@ namespace API.Core.Services.OpenAPI.Generator
                 if (param.Name != "X-3E-UserId" && param.Name != "X-3E-InstanceId" && param.Name != "x-3e-tenantid")
                 {
                     var paramType = GetCSharpType(param.Schema?.Type ?? "string");
-                    var optional = param.Required ? "" : " = null";
-                    parameters.Add($"{paramType} {GetParameterName(param.Name)}{optional}");
+                    parameters.Add($"{paramType} {GetParameterName(param.Name)} = null");
                 }
             }
 
@@ -153,15 +151,14 @@ namespace API.Core.Services.OpenAPI.Generator
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Query))
             {
                 var paramType = GetCSharpType(param.Schema?.Type ?? "string");
-                var optional = param.Required ? "" : " = null";
-                parameters.Add($"{paramType} {GetParameterName(param.Name)}{optional}");
+                parameters.Add($"{paramType} {GetParameterName(param.Name)} = null");
             }
 
             // Add path parameters
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
             {
                 var paramType = GetCSharpType(param.Schema?.Type ?? "string");
-                parameters.Add($"{paramType} {GetParameterName(param.Name)}");
+                parameters.Add($"{paramType} {GetParameterName(param.Name)} = null");
             }
 
             return string.Join(", ", parameters);
@@ -179,8 +176,8 @@ namespace API.Core.Services.OpenAPI.Generator
                 "integer" => "int?",
                 "number" => "double?",
                 "boolean" => "bool?",
-                "array" => "object[]",
-                _ => "string"
+                "array" => "object?",
+                _ => "string?"
             };
         }
 
