@@ -30,28 +30,26 @@ namespace API.Core.Services.OpenAPI
                 var schemaFiles = _schemaGenerator.GenerateSchemaFiles(spec, endpoints, className);
                 var requestBodyFiles = _requestBodyGenerator.GenerateRequestBodyFiles(spec, endpoints, className);
 
-                // Save main test file (without subfolder)
-                SaveGeneratedFile("Tests/Component", $"{className}.cs", mainTest);
+                // Save main test file (with subfolder)
+                SaveGeneratedFile($"Tests/Component/{tag}", $"{className}.cs", mainTest);
                 SaveGeneratedFile("Source/Endpoints", $"{className}_Endpoints.cs", endpointClass);
                 
                 // Save schema JSON files
                 foreach (var schemaFile in schemaFiles)
                 {
-                    SaveGeneratedFile("Source/Schemas", schemaFile.Key, schemaFile.Value);
+                    SaveGeneratedFile($"Source/Schemas/{tag}", schemaFile.Key, schemaFile.Value);
                 }
                 
                 // Save request body JSON files
                 foreach (var requestBodyFile in requestBodyFiles)
                 {
-                    SaveGeneratedFile("Source/RequestBodies", requestBodyFile.Key, requestBodyFile.Value);
+                    SaveGeneratedFile($"Source/RequestBodies/{tag}", requestBodyFile.Key, requestBodyFile.Value);
                 }
 
-                Console.WriteLine($"✅ Generated modular test structure for {className}");
                 return mainTest; // Return main test for compatibility
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error generating modular tests for {className}: {ex.Message}");
                 return GenerateFallbackTest(className, tag, ex.Message);
             }
         }
