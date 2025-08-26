@@ -28,16 +28,24 @@ namespace API.Core.Services.OpenAPI
                 // Generate all components
                 var mainTest = _mainTestGenerator.GenerateMainTestClass(spec, endpoints, tenant, userId, className, tag);
                 var endpointClass = _endpointGenerator.GenerateEndpointClass(spec, endpoints, $"{className}_Endpoints");
-                var schemaClass = _schemaGenerator.GenerateSchemaClass(spec, endpoints, $"{className}_Schemas");
-                var requestBodyClass = _requestBodyGenerator.GenerateRequestBodyClass(spec, endpoints, $"{className}_RequestBodies");
-                var methodClass = _testMethodGenerator.GenerateTestMethods(spec, endpoints, $"{className}_Methods");
+                var schemaFiles = _schemaGenerator.GenerateSchemaFiles(spec, endpoints, className);
+                var requestBodyFiles = _requestBodyGenerator.GenerateRequestBodyFiles(spec, endpoints, className);
 
-                // Save all files
+                // Save main test file (without subfolder)
                 SaveGeneratedFile("Tests/Component", $"{className}.cs", mainTest);
                 SaveGeneratedFile("Source/Endpoints", $"{className}_Endpoints.cs", endpointClass);
-                SaveGeneratedFile("Source/Schemas", $"{className}_Schemas.cs", schemaClass);
-                SaveGeneratedFile("Source/RequestBodies", $"{className}_RequestBodies.cs", requestBodyClass);
-                SaveGeneratedFile("Source/Methods", $"{className}_Methods.cs", methodClass);
+                
+                // Save schema JSON files
+                foreach (var schemaFile in schemaFiles)
+                {
+                    SaveGeneratedFile("Source/Schemas", schemaFile.Key, schemaFile.Value);
+                }
+                
+                // Save request body JSON files
+                foreach (var requestBodyFile in requestBodyFiles)
+                {
+                    SaveGeneratedFile("Source/RequestBodies", requestBodyFile.Key, requestBodyFile.Value);
+                }
 
                 Console.WriteLine($"✅ Generated modular test structure for {className}");
                 return mainTest; // Return main test for compatibility

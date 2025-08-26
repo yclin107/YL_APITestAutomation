@@ -44,31 +44,47 @@ namespace API.Core.Services.OpenAPI.Generator
         {
             var methodName = GenerateMethodName(endpoint.Method, endpoint.Path);
             var parameters = GetMethodParameters(endpoint);
-            var headers = GetEndpointHeaders(endpoint, spec);
-            var queryParams = GetQueryParameters(endpoint);
 
             sb.AppendLine($"        public RestAssured.Response.VerifiableResponse {methodName}({parameters})");
             sb.AppendLine("        {");
+            
+            // Replace path parameters in the URL
+            var urlPath = endpoint.Path;
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
+            {
+                var paramName = GetParameterName(param.Name);
+                urlPath = urlPath.Replace($"{{{param.Name}}}", $"{{{paramName}}}");
+            }
+            
             sb.AppendLine("            var request = Given()");
             sb.AppendLine("                .OAuth2(_token)");
 
-            // Add headers
-            foreach (var header in headers)
+            // Add default headers
+            sb.AppendLine("                .Header(\"x-3e-tenantid\", _context.TenantId)");
+            
+            // Add headers from endpoint parameters
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Header))
             {
-                if (header.Key == "X-3E-UserId")
+                if (param.Name == "X-3E-UserId")
                     sb.AppendLine("                .Header(\"X-3E-UserId\", _context.UserId)");
-                else if (header.Key == "X-3E-InstanceId")
+                else if (param.Name == "X-3E-InstanceId")
                     sb.AppendLine("                .Header(\"X-3E-InstanceId\", _context.InstanceId)");
-                else if (header.Key == "x-3e-tenantid")
-                    sb.AppendLine("                .Header(\"x-3e-tenantid\", _context.TenantId)");
-                else
-                    sb.AppendLine($"                .Header(\"{header.Key}\", {GetParameterName(header.Key)})");
+                else if (param.Name != "x-3e-tenantid") // Skip duplicate
+                    sb.AppendLine($"                .Header(\"{param.Name}\", {GetParameterName(param.Name)})");
             }
 
             // Add query parameters
-            foreach (var param in queryParams)
+            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Query))
             {
-                sb.AppendLine($"                .QueryParam(\"{param.Name}\", {GetParameterName(param.Name)})");
+                var paramName = GetParameterName(param.Name);
+                if (param.Required)
+                {
+                    sb.AppendLine($"                .QueryParam(\"{param.Name}\", {paramName})");
+                }
+                else
+                {
+                    sb.AppendLine($"                .QueryParam(\"{param.Name}\", {paramName} ?? GetTestValue(\"{param.Schema?.Type ?? "string"}\"))");
+                }
             }
 
             // Add request body if needed
@@ -77,8 +93,18 @@ namespace API.Core.Services.OpenAPI.Generator
                 sb.AppendLine("                .Body(requestBody)");
             }
 
-            sb.AppendLine($"                .When()");
-            sb.AppendLine($"                .{GetRestAssuredMethod(endpoint.Method)}($\"{{_baseUrl}}{endpoint.Path}\")");
+            sb.AppendLine("                .When()");
+            
+            // Use string interpolation for path parameters
+            if (endpoint.Parameters.Any(p => p.In == ParameterLocation.Path))
+            {
+                sb.AppendLine($"                .{GetRestAssuredMethod(endpoint.Method)}($\"{{_baseUrl}}{urlPath}\")");
+            }
+            else
+            {
+                sb.AppendLine($"                .{GetRestAssuredMethod(endpoint.Method)}($\"{{_baseUrl}}{endpoint.Path}\")");
+            }
+
             sb.AppendLine("                .Then();");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -114,7 +140,9 @@ namespace API.Core.Services.OpenAPI.Generator
             {
                 if (param.Name != "X-3E-UserId" && param.Name != "X-3E-InstanceId" && param.Name != "x-3e-tenantid")
                 {
-                    parameters.Add($"string {GetParameterName(param.Name)}");
+                    var paramType = GetCSharpType(param.Schema?.Type ?? "string");
+                    var optional = param.Required ? "" : " = null";
+                    parameters.Add($"{paramType} {GetParameterName(param.Name)}{optional}");
                 }
             }
 
@@ -136,30 +164,9 @@ namespace API.Core.Services.OpenAPI.Generator
             return string.Join(", ", parameters);
         }
 
-        private Dictionary<string, string> GetEndpointHeaders(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
-        {
-            var headers = new Dictionary<string, string>();
-            
-            // Add default headers
-            headers["x-3e-tenantid"] = "_context.TenantId";
-            
-            // Add headers from parameters
-            foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Header))
-            {
-                headers[param.Name] = GetParameterName(param.Name);
-            }
-
-            return headers;
-        }
-
-        private List<OpenApiParameter> GetQueryParameters(OpenApiEndpointTest endpoint)
-        {
-            return endpoint.Parameters.Where(p => p.In == ParameterLocation.Query).ToList();
-        }
-
         private string GetParameterName(string name)
         {
-            return name.Replace("-", "").Replace(".", "").ToLower();
+            return name.Replace("-", "").Replace(".", "").Replace("_", "").ToLower();
         }
 
         private string GetCSharpType(string openApiType)

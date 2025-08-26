@@ -12,7 +12,8 @@ namespace API.Core.Services.OpenAPI.Generator
             
             sb.AppendLine("using Allure.Net.Commons;");
             sb.AppendLine("using Allure.NUnit.Attributes;");
-            sb.AppendLine("using API.TestBase.Source.Methods;");
+            sb.AppendLine("using System.Text.Json;");
+            sb.AppendLine("using static RestAssured.Dsl;");
             sb.AppendLine();
             sb.AppendLine("namespace API.TestBase.Tests.Component");
             sb.AppendLine("{");
@@ -21,7 +22,7 @@ namespace API.Core.Services.OpenAPI.Generator
             sb.AppendLine($"    [AllureFeature(\"{tag}\")]");
             sb.AppendLine($"    public class {className} : TestBase");
             sb.AppendLine("    {");
-            sb.AppendLine($"        private {GetMethodClassName(className)} _methods;");
+            sb.AppendLine($"        private {GetEndpointClassName(className)} _endpoints;");
             sb.AppendLine("        private TestContext _context;");
             sb.AppendLine("        private string _token;");
             sb.AppendLine();
@@ -30,7 +31,7 @@ namespace API.Core.Services.OpenAPI.Generator
             sb.AppendLine("        {");
             sb.AppendLine("            _context = GetTestContext();");
             sb.AppendLine("            _token = GetAuthToken(_context);");
-            sb.AppendLine($"            _methods = new {GetMethodClassName(className)}(GetBaseUrl(), _token, _context);");
+            sb.AppendLine($"            _endpoints = new {GetEndpointClassName(className)}(GetBaseUrl(), _token, _context);");
             sb.AppendLine($"            InitContext(\"{tag}\");");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -52,7 +53,9 @@ namespace API.Core.Services.OpenAPI.Generator
         private void GeneratePositiveTest(StringBuilder sb, OpenApiEndpointTest endpoint, string className)
         {
             var testName = GenerateTestName(endpoint.Method, endpoint.Path, "Positive");
-            var methodName = GenerateMethodName(endpoint.Method, endpoint.Path);
+            var endpointMethodName = GenerateEndpointMethodName(endpoint.Method, endpoint.Path);
+            var requestBodyJson = GetRequestBodyJsonPath(endpoint, className);
+            var schemaJson = GetSchemaJsonPath(endpoint, className);
 
             sb.AppendLine($"        [Test]");
             sb.AppendLine($"        [Category(\"Generated\")]");
@@ -62,8 +65,15 @@ namespace API.Core.Services.OpenAPI.Generator
             sb.AppendLine("        {");
             sb.AppendLine($"            AllureApi.Step(\"Execute {endpoint.Method.ToUpper()} {endpoint.Path} - Positive Test\", async () =>");
             sb.AppendLine("            {");
-            sb.AppendLine($"                var result = await _methods.{methodName}(");
             
+            // Load request body if needed
+            if (HasRequestBody(endpoint))
+            {
+                sb.AppendLine($"                var requestBodyJson = await File.ReadAllTextAsync(\"{requestBodyJson}\");");
+                sb.AppendLine("                var requestBody = JsonSerializer.Deserialize<object>(requestBodyJson);");
+            }
+            
+            sb.AppendLine($"                var response = _endpoints.{endpointMethodName}(");
             // Add default parameters
             var parameters = GetDefaultParameters(endpoint);
             if (parameters.Any())
@@ -73,11 +83,20 @@ namespace API.Core.Services.OpenAPI.Generator
             
             sb.AppendLine("                );");
             sb.AppendLine();
-            sb.AppendLine("                AttachResponse(\"Response\", result.Response);");
-            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(result.Response));");
+            sb.AppendLine("                var rawResponse = response.Extract().Response().Content.ReadAsStringAsync().Result;");
+            sb.AppendLine("                var statusCode = response.Extract().Response().StatusCode;");
             sb.AppendLine();
-            sb.AppendLine("                Assert.That(result.Success, Is.True, $\"Request should succeed. Errors: {string.Join(\", \", result.ValidationErrors)}\");");
-            sb.AppendLine("                Assert.That(string.IsNullOrEmpty(result.Response), Is.False, \"Response should not be empty\");");
+            sb.AppendLine("                AttachResponse(\"Response\", rawResponse);");
+            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(rawResponse));");
+            sb.AppendLine();
+            sb.AppendLine("                // Validate success status");
+            sb.AppendLine("                Assert.That((int)statusCode, Is.InRange(200, 299), \"Should return success status code\");");
+            sb.AppendLine("                Assert.That(string.IsNullOrEmpty(rawResponse), Is.False, \"Response should not be empty\");");
+            sb.AppendLine();
+            sb.AppendLine("                // Schema validation");
+            sb.AppendLine($"                var schemaJson = await File.ReadAllTextAsync(\"{schemaJson}\");");
+            sb.AppendLine("                var validationErrors = await ValidateJsonSchema(rawResponse, schemaJson);");
+            sb.AppendLine("                Assert.That(validationErrors, Is.Empty, $\"Schema validation should pass. Errors: {string.Join(\", \", validationErrors)}\");");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -86,7 +105,8 @@ namespace API.Core.Services.OpenAPI.Generator
         private void GenerateUnauthorizedTest(StringBuilder sb, OpenApiEndpointTest endpoint, string className)
         {
             var testName = GenerateTestName(endpoint.Method, endpoint.Path, "Unauthorized");
-            var methodName = GenerateMethodName(endpoint.Method, endpoint.Path);
+            var endpointMethodName = GenerateEndpointMethodName(endpoint.Method, endpoint.Path);
+            var requestBodyJson = GetRequestBodyJsonPath(endpoint, className);
 
             sb.AppendLine($"        [Test]");
             sb.AppendLine($"        [Category(\"Generated\")]");
@@ -96,10 +116,17 @@ namespace API.Core.Services.OpenAPI.Generator
             sb.AppendLine("        {");
             sb.AppendLine($"            AllureApi.Step(\"Execute {endpoint.Method.ToUpper()} {endpoint.Path} - Unauthorized Test\", async () =>");
             sb.AppendLine("            {");
-            sb.AppendLine("                // Create methods instance without token");
-            sb.AppendLine($"                var unauthorizedMethods = new {GetMethodClassName(className)}(GetBaseUrl(), \"\", _context);");
+            sb.AppendLine("                // Create endpoints instance without token");
+            sb.AppendLine($"                var unauthorizedEndpoints = new {GetEndpointClassName(className)}(GetBaseUrl(), \"\", _context);");
+            
+            // Load request body if needed
+            if (HasRequestBody(endpoint))
+            {
+                sb.AppendLine($"                var requestBodyJson = await File.ReadAllTextAsync(\"{requestBodyJson}\");");
+                sb.AppendLine("                var requestBody = JsonSerializer.Deserialize<object>(requestBodyJson);");
+            }
             sb.AppendLine();
-            sb.AppendLine($"                var result = await unauthorizedMethods.{methodName}(");
+            sb.AppendLine($"                var response = unauthorizedEndpoints.{endpointMethodName}(");
             
             // Add default parameters
             var parameters = GetDefaultParameters(endpoint);
@@ -110,10 +137,13 @@ namespace API.Core.Services.OpenAPI.Generator
             
             sb.AppendLine("                );");
             sb.AppendLine();
-            sb.AppendLine("                AttachResponse(\"Unauthorized Response\", result.Response);");
-            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(result.Response));");
+            sb.AppendLine("                var rawResponse = response.Extract().Response().Content.ReadAsStringAsync().Result;");
+            sb.AppendLine("                var statusCode = response.Extract().Response().StatusCode;");
             sb.AppendLine();
-            sb.AppendLine("                Assert.That(result.Response, Does.Contain(\"401\").Or.Contain(\"Unauthorized\"), \"Should return 401 Unauthorized\");");
+            sb.AppendLine("                AttachResponse(\"Unauthorized Response\", rawResponse);");
+            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(rawResponse));");
+            sb.AppendLine();
+            sb.AppendLine("                Assert.That((int)statusCode, Is.EqualTo(401), \"Should return 401 Unauthorized\");");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -125,7 +155,7 @@ namespace API.Core.Services.OpenAPI.Generator
             if (!requiredParams.Any()) return;
 
             var testName = GenerateTestName(endpoint.Method, endpoint.Path, "Missing_Parameters");
-            var methodName = GenerateMethodName(endpoint.Method, endpoint.Path);
+            var endpointMethodName = GenerateEndpointMethodName(endpoint.Method, endpoint.Path);
 
             sb.AppendLine($"        [Test]");
             sb.AppendLine($"        [Category(\"Generated\")]");
@@ -135,14 +165,17 @@ namespace API.Core.Services.OpenAPI.Generator
             sb.AppendLine("        {");
             sb.AppendLine($"            AllureApi.Step(\"Execute {endpoint.Method.ToUpper()} {endpoint.Path} - Missing Parameters Test\", async () =>");
             sb.AppendLine("            {");
-            sb.AppendLine($"                var result = await _methods.{methodName}(");
+            sb.AppendLine($"                var response = _endpoints.{endpointMethodName}(");
             sb.AppendLine("                    // Intentionally omitting required parameters");
             sb.AppendLine("                );");
             sb.AppendLine();
-            sb.AppendLine("                AttachResponse(\"Missing Parameters Response\", result.Response);");
-            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(result.Response));");
+            sb.AppendLine("                var rawResponse = response.Extract().Response().Content.ReadAsStringAsync().Result;");
+            sb.AppendLine("                var statusCode = response.Extract().Response().StatusCode;");
             sb.AppendLine();
-            sb.AppendLine("                Assert.That(result.Response, Does.Contain(\"400\").Or.Contain(\"Bad Request\"), \"Should return 400 Bad Request for missing parameters\");");
+            sb.AppendLine("                AttachResponse(\"Missing Parameters Response\", rawResponse);");
+            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(rawResponse));");
+            sb.AppendLine();
+            sb.AppendLine("                Assert.That((int)statusCode, Is.EqualTo(400), \"Should return 400 Bad Request for missing parameters\");");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -151,7 +184,9 @@ namespace API.Core.Services.OpenAPI.Generator
         private void GenerateSchemaValidationTest(StringBuilder sb, OpenApiEndpointTest endpoint, string className)
         {
             var testName = GenerateTestName(endpoint.Method, endpoint.Path, "Schema_Validation");
-            var methodName = GenerateMethodName(endpoint.Method, endpoint.Path);
+            var endpointMethodName = GenerateEndpointMethodName(endpoint.Method, endpoint.Path);
+            var requestBodyJson = GetRequestBodyJsonPath(endpoint, className);
+            var schemaJson = GetSchemaJsonPath(endpoint, className);
 
             sb.AppendLine($"        [Test]");
             sb.AppendLine($"        [Category(\"Generated\")]");
@@ -161,7 +196,15 @@ namespace API.Core.Services.OpenAPI.Generator
             sb.AppendLine("        {");
             sb.AppendLine($"            AllureApi.Step(\"Execute {endpoint.Method.ToUpper()} {endpoint.Path} - Schema Validation Test\", async () =>");
             sb.AppendLine("            {");
-            sb.AppendLine($"                var result = await _methods.{methodName}(");
+            
+            // Load request body if needed
+            if (HasRequestBody(endpoint))
+            {
+                sb.AppendLine($"                var requestBodyJson = await File.ReadAllTextAsync(\"{requestBodyJson}\");");
+                sb.AppendLine("                var requestBody = JsonSerializer.Deserialize<object>(requestBodyJson);");
+            }
+            
+            sb.AppendLine($"                var response = _endpoints.{endpointMethodName}(");
             
             // Add default parameters
             var parameters = GetDefaultParameters(endpoint);
@@ -172,15 +215,24 @@ namespace API.Core.Services.OpenAPI.Generator
             
             sb.AppendLine("                );");
             sb.AppendLine();
-            sb.AppendLine("                AttachResponse(\"Schema Validation Response\", result.Response);");
-            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(result.Response));");
+            sb.AppendLine("                var rawResponse = response.Extract().Response().Content.ReadAsStringAsync().Result;");
+            sb.AppendLine("                var statusCode = response.Extract().Response().StatusCode;");
             sb.AppendLine();
-            sb.AppendLine("                if (result.ValidationErrors.Any())");
+            sb.AppendLine("                AttachResponse(\"Schema Validation Response\", rawResponse);");
+            sb.AppendLine("                AllureApi.AddAttachment(\"Response JSON\", \"application/json\", System.Text.Encoding.UTF8.GetBytes(rawResponse));");
+            sb.AppendLine();
+            sb.AppendLine("                // Schema validation for success responses");
+            sb.AppendLine("                if ((int)statusCode >= 200 && (int)statusCode < 300)");
             sb.AppendLine("                {");
-            sb.AppendLine("                    AllureApi.AddAttachment(\"Validation Errors\", \"text/plain\", System.Text.Encoding.UTF8.GetBytes(string.Join(\"\\n\", result.ValidationErrors)));");
+            sb.AppendLine($"                    var schemaJson = await File.ReadAllTextAsync(\"{schemaJson}\");");
+            sb.AppendLine("                    var validationErrors = await ValidateJsonSchema(rawResponse, schemaJson);");
+            sb.AppendLine("                    if (validationErrors.Any())");
+            sb.AppendLine("                    {");
+            sb.AppendLine("                        AllureApi.AddAttachment(\"Validation Errors\", \"text/plain\", System.Text.Encoding.UTF8.GetBytes(string.Join(\"\\n\", validationErrors)));");
+            sb.AppendLine("                    }");
+            sb.AppendLine("                    Assert.That(validationErrors, Is.Empty, $\"Schema validation should pass. Errors: {string.Join(\", \", validationErrors)}\");");
             sb.AppendLine("                }");
             sb.AppendLine();
-            sb.AppendLine("                Assert.That(result.ValidationErrors, Is.Empty, $\"Schema validation should pass. Errors: {string.Join(\", \", result.ValidationErrors)}\");");
             sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -201,7 +253,7 @@ namespace API.Core.Services.OpenAPI.Generator
             return $"{method.ToUpper()}_{pathPart}_{testType}_Test";
         }
 
-        private string GenerateMethodName(string method, string path)
+        private string GenerateEndpointMethodName(string method, string path)
         {
             var cleanPath = path.Replace("/", "_")
                                .Replace("{", "")
@@ -213,7 +265,7 @@ namespace API.Core.Services.OpenAPI.Generator
             var capitalizedParts = parts.Select(p => char.ToUpper(p[0]) + p.Substring(1).ToLower()).ToArray();
             var pathPart = string.Join("_", capitalizedParts);
             
-            return $"Execute_{method.ToUpper()}_{pathPart}";
+            return $"{method.ToUpper()}_{pathPart}";
         }
 
         private List<string> GetDefaultParameters(OpenApiEndpointTest endpoint)
@@ -223,7 +275,7 @@ namespace API.Core.Services.OpenAPI.Generator
             // Add request body parameter for POST/PUT/PATCH
             if (HasRequestBody(endpoint))
             {
-                parameters.Add("requestBody: null");
+                parameters.Add("requestBody");
             }
 
             // Add header parameters (except special ones)
@@ -262,9 +314,21 @@ namespace API.Core.Services.OpenAPI.Generator
             return name.Replace("-", "").Replace(".", "").ToLower();
         }
 
-        private string GetMethodClassName(string baseClassName)
+        private string GetEndpointClassName(string baseClassName)
         {
-            return $"{baseClassName}_Methods";
+            return $"{baseClassName}_Endpoints";
+        }
+        
+        private string GetRequestBodyJsonPath(OpenApiEndpointTest endpoint, string className)
+        {
+            var methodName = GenerateEndpointMethodName(endpoint.Method, endpoint.Path);
+            return $"Source/RequestBodies/{methodName}.json";
+        }
+        
+        private string GetSchemaJsonPath(OpenApiEndpointTest endpoint, string className)
+        {
+            var methodName = GenerateEndpointMethodName(endpoint.Method, endpoint.Path);
+            return $"Source/Schemas/{methodName}_Response.json";
         }
     }
 }

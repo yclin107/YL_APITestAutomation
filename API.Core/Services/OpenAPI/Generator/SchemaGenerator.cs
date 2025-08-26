@@ -7,71 +7,21 @@ namespace API.Core.Services.OpenAPI.Generator
 {
     public class SchemaGenerator
     {
-        public string GenerateSchemaClass(OpenApiTestSpec spec, List<OpenApiEndpointTest> endpoints, string className)
+        public Dictionary<string, string> GenerateSchemaFiles(OpenApiTestSpec spec, List<OpenApiEndpointTest> endpoints, string className)
         {
-            var sb = new StringBuilder();
-            
-            sb.AppendLine("using System.Text.Json;");
-            sb.AppendLine("using NJsonSchema;");
-            sb.AppendLine("using NJsonSchema.Validation;");
-            sb.AppendLine();
-            sb.AppendLine("namespace API.TestBase.Source.Schemas");
-            sb.AppendLine("{");
-            sb.AppendLine($"    public static class {className}");
-            sb.AppendLine("    {");
+            var schemaFiles = new Dictionary<string, string>();
 
             foreach (var endpoint in endpoints)
             {
-                GenerateSchemaConstants(sb, endpoint, spec);
+                var schemaJson = ExtractResponseSchema(endpoint, spec);
+                var fileName = GenerateSchemaFileName(endpoint.Method, endpoint.Path);
+                schemaFiles[fileName] = schemaJson;
             }
 
-            sb.AppendLine();
-            sb.AppendLine("        public static async Task<bool> ValidateSchema(string schemaJson, string responseJson)");
-            sb.AppendLine("        {");
-            sb.AppendLine("            try");
-            sb.AppendLine("            {");
-            sb.AppendLine("                var schema = await JsonSchema.FromJsonAsync(schemaJson);");
-            sb.AppendLine("                var validator = new JsonSchemaValidator();");
-            sb.AppendLine("                var errors = validator.Validate(responseJson, schema);");
-            sb.AppendLine("                return !errors.Any();");
-            sb.AppendLine("            }");
-            sb.AppendLine("            catch");
-            sb.AppendLine("            {");
-            sb.AppendLine("                return false;");
-            sb.AppendLine("            }");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        public static async Task<List<string>> GetValidationErrors(string schemaJson, string responseJson)");
-            sb.AppendLine("        {");
-            sb.AppendLine("            try");
-            sb.AppendLine("            {");
-            sb.AppendLine("                var schema = await JsonSchema.FromJsonAsync(schemaJson);");
-            sb.AppendLine("                var validator = new JsonSchemaValidator();");
-            sb.AppendLine("                var errors = validator.Validate(responseJson, schema);");
-            sb.AppendLine("                return errors.Select(e => $\"{e.Path}: {e.Kind} - {e.Property}\").ToList();");
-            sb.AppendLine("            }");
-            sb.AppendLine("            catch (Exception ex)");
-            sb.AppendLine("            {");
-            sb.AppendLine("                return new List<string> { $\"Schema validation error: {ex.Message}\" };");
-            sb.AppendLine("            }");
-            sb.AppendLine("        }");
-
-            sb.AppendLine("    }");
-            sb.AppendLine("}");
-
-            return sb.ToString();
+            return schemaFiles;
         }
 
-        private void GenerateSchemaConstants(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
-        {
-            var constantName = GenerateSchemaConstantName(endpoint.Method, endpoint.Path);
-            var schemaJson = ExtractResponseSchema(endpoint, spec);
-
-            sb.AppendLine($"        public static readonly string {constantName} = @\"{EscapeJsonForString(schemaJson)}\";");
-            sb.AppendLine();
-        }
-
-        private string GenerateSchemaConstantName(string method, string path)
+        private string GenerateSchemaFileName(string method, string path)
         {
             var cleanPath = path.Replace("/", "_")
                                .Replace("{", "")
@@ -83,7 +33,7 @@ namespace API.Core.Services.OpenAPI.Generator
             var capitalizedParts = parts.Select(p => char.ToUpper(p[0]) + p.Substring(1).ToLower()).ToArray();
             var pathPart = string.Join("_", capitalizedParts);
             
-            return $"{method.ToUpper()}_{pathPart}_Schema";
+            return $"{method.ToUpper()}_{pathPart}_Response.json";
         }
 
         private string ExtractResponseSchema(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)

@@ -8,26 +8,18 @@ namespace API.Core.Services.OpenAPI.Generator
 {
     public class RequestBodyGenerator
     {
-        public string GenerateRequestBodyClass(OpenApiTestSpec spec, List<OpenApiEndpointTest> endpoints, string className)
+        public Dictionary<string, string> GenerateRequestBodyFiles(OpenApiTestSpec spec, List<OpenApiEndpointTest> endpoints, string className)
         {
-            var sb = new StringBuilder();
-            
-            sb.AppendLine("using System.Text.Json;");
-            sb.AppendLine();
-            sb.AppendLine("namespace API.TestBase.Source.RequestBodies");
-            sb.AppendLine("{");
-            sb.AppendLine($"    public static class {className}");
-            sb.AppendLine("    {");
+            var requestBodyFiles = new Dictionary<string, string>();
 
             foreach (var endpoint in endpoints.Where(e => HasRequestBody(e)))
             {
-                GenerateRequestBodyMethod(sb, endpoint, spec);
+                var requestBodyJson = ExtractRequestBodyFromOpenApi(endpoint, spec);
+                var fileName = GenerateRequestBodyFileName(endpoint.Method, endpoint.Path);
+                requestBodyFiles[fileName] = requestBodyJson;
             }
 
-            sb.AppendLine("    }");
-            sb.AppendLine("}");
-
-            return sb.ToString();
+            return requestBodyFiles;
         }
 
         private bool HasRequestBody(OpenApiEndpointTest endpoint)
@@ -37,19 +29,7 @@ namespace API.Core.Services.OpenAPI.Generator
                    endpoint.Method.ToUpper() == "PATCH";
         }
 
-        private void GenerateRequestBodyMethod(StringBuilder sb, OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
-        {
-            var methodName = GenerateRequestBodyMethodName(endpoint.Method, endpoint.Path);
-            var requestBodyCode = ExtractRequestBodyFromOpenApi(endpoint, spec);
-
-            sb.AppendLine($"        public static object Get{methodName}()");
-            sb.AppendLine("        {");
-            sb.AppendLine($"            return {requestBodyCode};");
-            sb.AppendLine("        }");
-            sb.AppendLine();
-        }
-
-        private string GenerateRequestBodyMethodName(string method, string path)
+        private string GenerateRequestBodyFileName(string method, string path)
         {
             var cleanPath = path.Replace("/", "_")
                                .Replace("{", "")
@@ -61,7 +41,7 @@ namespace API.Core.Services.OpenAPI.Generator
             var capitalizedParts = parts.Select(p => char.ToUpper(p[0]) + p.Substring(1).ToLower()).ToArray();
             var pathPart = string.Join("_", capitalizedParts);
             
-            return $"{method.ToUpper()}_{pathPart}_RequestBody";
+            return $"{method.ToUpper()}_{pathPart}.json";
         }
 
         private string ExtractRequestBodyFromOpenApi(OpenApiEndpointTest endpoint, OpenApiTestSpec spec)
@@ -85,7 +65,7 @@ namespace API.Core.Services.OpenAPI.Generator
                     // First try to get example
                     if (jsonContent.Value.Value.Example != null)
                     {
-                        return ConvertOpenApiValueToCSharp(jsonContent.Value.Value.Example);
+                        return ConvertOpenApiValueToJson(jsonContent.Value.Value.Example);
                     }
 
                     // Try examples collection
@@ -94,7 +74,7 @@ namespace API.Core.Services.OpenAPI.Generator
                         var firstExample = jsonContent.Value.Value.Examples.First().Value;
                         if (firstExample.Value != null)
                         {
-                            return ConvertOpenApiValueToCSharp(firstExample.Value);
+                            return ConvertOpenApiValueToJson(firstExample.Value);
                         }
                     }
 
@@ -114,85 +94,64 @@ namespace API.Core.Services.OpenAPI.Generator
             }
         }
 
-        private string ConvertOpenApiValueToCSharp(IOpenApiAny openApiValue)
+        private string ConvertOpenApiValueToJson(IOpenApiAny openApiValue)
         {
             try
             {
                 switch (openApiValue)
                 {
                     case OpenApiObject obj:
-                        var properties = obj.Select(kvp => 
-                            $"{kvp.Key} = {ConvertOpenApiValueToCSharp(kvp.Value)}");
-                        return $"new {{ {string.Join(", ", properties)} }}";
+                        var properties = obj.ToDictionary(kvp => kvp.Key, kvp => ConvertOpenApiValueToObject(kvp.Value));
+                        return JsonSerializer.Serialize(properties, new JsonSerializerOptions { WriteIndented = true });
 
                     case OpenApiArray arr:
-                        var items = arr.Select(ConvertOpenApiValueToCSharp);
-                        return $"new object[] {{ {string.Join(", ", items)} }}";
+                        var items = arr.Select(ConvertOpenApiValueToObject).ToArray();
+                        return JsonSerializer.Serialize(items, new JsonSerializerOptions { WriteIndented = true });
 
                     case OpenApiString str:
-                        return $"\"{str.Value}\"";
+                        return JsonSerializer.Serialize(str.Value);
 
                     case OpenApiInteger intVal:
-                        return intVal.Value.ToString();
+                        return JsonSerializer.Serialize(intVal.Value);
 
                     case OpenApiDouble doubleVal:
-                        return doubleVal.Value.ToString();
+                        return JsonSerializer.Serialize(doubleVal.Value);
 
                     case OpenApiBoolean boolVal:
-                        return boolVal.Value.ToString().ToLower();
+                        return JsonSerializer.Serialize(boolVal.Value);
 
                     default:
                         // Try to parse as JSON string
                         if (openApiValue.ToString() != null)
                         {
-                            try
-                            {
-                                var jsonElement = JsonSerializer.Deserialize<JsonElement>(openApiValue.ToString());
-                                return ConvertJsonElementToCSharp(jsonElement);
-                            }
-                            catch
-                            {
-                                return $"\"{openApiValue}\"";
-                            }
+                            return openApiValue.ToString();
                         }
-                        return "null";
+                        return JsonSerializer.Serialize((object)null);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠️  Error converting OpenAPI value: {ex.Message}");
-                return "null";
+                return JsonSerializer.Serialize((object)null);
             }
         }
 
-        private string ConvertJsonElementToCSharp(JsonElement element)
+        private object ConvertOpenApiValueToObject(IOpenApiAny openApiValue)
         {
-            switch (element.ValueKind)
+            switch (openApiValue)
             {
-                case JsonValueKind.Object:
-                    var objProperties = element.EnumerateObject()
-                        .Select(prop => $"{prop.Name} = {ConvertJsonElementToCSharp(prop.Value)}");
-                    return $"new {{ {string.Join(", ", objProperties)} }}";
-
-                case JsonValueKind.Array:
-                    var arrayItems = element.EnumerateArray()
-                        .Select(ConvertJsonElementToCSharp);
-                    return $"new object[] {{ {string.Join(", ", arrayItems)} }}";
-
-                case JsonValueKind.String:
-                    return $"\"{element.GetString()}\"";
-
-                case JsonValueKind.Number:
-                    return element.GetDecimal().ToString();
-
-                case JsonValueKind.True:
-                    return "true";
-
-                case JsonValueKind.False:
-                    return "false";
-
-                case JsonValueKind.Null:
-                    return "null";
+                case OpenApiObject obj:
+                    return obj.ToDictionary(kvp => kvp.Key, kvp => ConvertOpenApiValueToObject(kvp.Value));
+                case OpenApiArray arr:
+                    return arr.Select(ConvertOpenApiValueToObject).ToArray();
+                case OpenApiString str:
+                    return str.Value;
+                case OpenApiInteger intVal:
+                    return intVal.Value;
+                case OpenApiDouble doubleVal:
+                    return doubleVal.Value;
+                case OpenApiBoolean boolVal:
+                    return boolVal.Value;
 
                 default:
                     return "null";
@@ -205,9 +164,10 @@ namespace API.Core.Services.OpenAPI.Generator
             {
                 if (schema.Properties?.Any() == true)
                 {
-                    var properties = schema.Properties.Select(prop => 
-                        $"{prop.Key} = {GenerateValueFromSchema(prop.Value, prop.Key)}");
-                    return $"new {{ {string.Join(", ", properties)} }}";
+                    var properties = schema.Properties.ToDictionary(
+                        prop => prop.Key, 
+                        prop => GenerateValueFromSchema(prop.Value, prop.Key));
+                    return JsonSerializer.Serialize(properties, new JsonSerializerOptions { WriteIndented = true });
                 }
 
                 return GenerateFallbackRequestBody();
@@ -219,29 +179,30 @@ namespace API.Core.Services.OpenAPI.Generator
             }
         }
 
-        private string GenerateValueFromSchema(OpenApiSchema schema, string propertyName)
+        private object GenerateValueFromSchema(OpenApiSchema schema, string propertyName)
         {
             if (schema.Format == "uuid" || propertyName.ToLower().Contains("id"))
             {
-                return "Guid.NewGuid().ToString()";
+                return Guid.NewGuid().ToString();
             }
 
             return schema.Type?.ToLower() switch
             {
-                "string" when schema.Format == "date-time" => "DateTime.Now.ToString(\"yyyy-MM-ddTHH:mm:ssZ\")",
-                "string" when schema.Format == "date" => "DateTime.Now.ToString(\"yyyy-MM-dd\")",
-                "string" => $"\"test-{propertyName.ToLower()}\"",
-                "integer" => "123",
-                "number" => "123.45",
-                "boolean" => "true",
-                "array" => "new[] { \"test-item\" }",
-                _ => $"\"test-{propertyName.ToLower()}\""
+                "string" when schema.Format == "date-time" => DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                "string" when schema.Format == "date" => DateTime.Now.ToString("yyyy-MM-dd"),
+                "string" => $"test-{propertyName.ToLower()}",
+                "integer" => 123,
+                "number" => 123.45,
+                "boolean" => true,
+                "array" => new[] { "test-item" },
+                _ => $"test-{propertyName.ToLower()}"
             };
         }
 
         private string GenerateFallbackRequestBody()
         {
-            return "new { testProperty = \"testValue\", id = Guid.NewGuid().ToString() }";
+            var fallback = new { testProperty = "testValue", id = Guid.NewGuid().ToString() };
+            return JsonSerializer.Serialize(fallback, new JsonSerializerOptions { WriteIndented = true });
         }
     }
 }

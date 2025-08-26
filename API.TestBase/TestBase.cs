@@ -206,6 +206,24 @@ namespace API.TestBase
                 _ => "default-test-value"
             };
         }
+        
+        /// <summary>
+        /// Validates JSON response against JSON schema
+        /// </summary>
+        protected async Task<List<string>> ValidateJsonSchema(string jsonResponse, string schemaJson)
+        {
+            try
+            {
+                var schema = await NJsonSchema.JsonSchema.FromJsonAsync(schemaJson);
+                var validator = new NJsonSchema.Validation.JsonSchemaValidator();
+                var errors = validator.Validate(jsonResponse, schema);
+                return errors.Select(e => $"{e.Path}: {e.Kind} - {e.Property}").ToList();
+            }
+            catch (Exception ex)
+            {
+                return new List<string> { $"Schema validation error: {ex.Message}" };
+            }
+        }
     }
 
     public class TestContext
