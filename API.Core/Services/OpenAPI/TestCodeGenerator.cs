@@ -15,6 +15,7 @@ namespace API.Core.Services.OpenAPI
         private static readonly SchemaGenerator _schemaGenerator = new();
         private static readonly RequestBodyGenerator _requestBodyGenerator = new();
         private static readonly MainTestGenerator _mainTestGenerator = new();
+        private static readonly ConfigGenerator _configGenerator = new();
 
         private static readonly SchemaValidator _schemaValidator = new();
 
@@ -29,10 +30,12 @@ namespace API.Core.Services.OpenAPI
                 var endpointClass = _endpointGenerator.GenerateEndpointClass(spec, endpoints, $"{className}_Endpoints");
                 var schemaFiles = _schemaGenerator.GenerateSchemaFiles(spec, endpoints, className);
                 var requestBodyFiles = _requestBodyGenerator.GenerateRequestBodyFiles(spec, endpoints, className);
+                var configJson = _configGenerator.GenerateEndpointConfig(spec, endpoints, tag);
 
                 // Save main test file (with subfolder)
                 SaveGeneratedFile($"Tests/Component/{tag}", $"{className}.cs", mainTest);
                 SaveGeneratedFile("Source/Endpoints", $"{className}_Endpoints.cs", endpointClass);
+                SaveGeneratedFile("Source/Config", "endpoint-config.json", configJson);
                 
                 // Save schema JSON files
                 foreach (var schemaFile in schemaFiles)

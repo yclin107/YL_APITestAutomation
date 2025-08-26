@@ -30,6 +30,92 @@ namespace API.Core.Services.OpenAPI.Generator
             sb.AppendLine("        }");
             sb.AppendLine();
 
+            // Add helper methods
+            sb.AppendLine("        private string BuildUrl(string urlTemplate, Dictionary<string, object?> pathParams)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            var url = $\"{_baseUrl}{urlTemplate}\";");
+            sb.AppendLine("            foreach (var param in pathParams)");
+            sb.AppendLine("            {");
+            sb.AppendLine("                if (param.Value != null)");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    url = url.Replace($\"{{{param.Key}}}\", param.Value.ToString());");
+            sb.AppendLine("                }");
+            sb.AppendLine("            }");
+            sb.AppendLine("            return url;");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        private object? GetConfigValue(string section, string key)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            // Load from dynamic config JSON file");
+            sb.AppendLine("            var configPath = Path.Combine(AppContext.BaseDirectory, \"Source\", \"Config\", \"endpoint-config.json\");");
+            sb.AppendLine("            if (File.Exists(configPath))");
+            sb.AppendLine("            {");
+            sb.AppendLine("                var json = File.ReadAllText(configPath);");
+            sb.AppendLine("                var config = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json);");
+            sb.AppendLine("                if (config?.ContainsKey(section) == true && config[section].ContainsKey(key))");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    return config[section][key];");
+            sb.AppendLine("                }");
+            sb.AppendLine("            }");
+            sb.AppendLine("            return GetTestValue(\"string\"); // Fallback");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        private object? GetDefaultRequestBody()");
+            sb.AppendLine("        {");
+            sb.AppendLine("            var configPath = Path.Combine(AppContext.BaseDirectory, \"Source\", \"Config\", \"endpoint-config.json\");");
+            sb.AppendLine("            if (File.Exists(configPath))");
+            sb.AppendLine("            {");
+            sb.AppendLine("                var json = File.ReadAllText(configPath);");
+            sb.AppendLine("                var config = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json);");
+            sb.AppendLine("                if (config?.ContainsKey(\"requestBodies\") == true && config[\"requestBodies\"].ContainsKey(\"default\"))");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    return config[\"requestBodies\"][\"default\"];");
+            sb.AppendLine("                }");
+            sb.AppendLine("            }");
+            sb.AppendLine("            return new { defaultProperty = \"defaultValue\" }; // Fallback");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            // Add helper methods
+            sb.AppendLine("        private Dictionary<string, Dictionary<string, object>> LoadEndpointConfig()");
+            sb.AppendLine("        {");
+            sb.AppendLine("            try");
+            sb.AppendLine("            {");
+            sb.AppendLine("                var configPath = \"Source/Config/EndpointConfig.json\";");
+            sb.AppendLine("                if (File.Exists(configPath))");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    var json = File.ReadAllText(configPath);");
+            sb.AppendLine("                    return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json) ?? new();");
+            sb.AppendLine("                }");
+            sb.AppendLine("            }");
+            sb.AppendLine("            catch (Exception ex)");
+            sb.AppendLine("            {");
+            sb.AppendLine("                Console.WriteLine($\"Warning: Could not load endpoint config: {ex.Message}\");");
+            sb.AppendLine("            }");
+            sb.AppendLine("            return new Dictionary<string, Dictionary<string, object>>();");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        private object? GetConfigValue(string section, string key)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            if (_config.TryGetValue(section, out var sectionConfig) && sectionConfig.TryGetValue(key, out var value))");
+            sb.AppendLine("            {");
+            sb.AppendLine("                return value;");
+            sb.AppendLine("            }");
+            sb.AppendLine("            return GetTestValue(\"string\"); // Fallback to test value");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        private string BuildUrl(string urlTemplate, Dictionary<string, object?> pathParams)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            var url = urlTemplate;");
+            sb.AppendLine("            foreach (var param in pathParams)");
+            sb.AppendLine("            {");
+            sb.AppendLine("                if (param.Value != null)");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    url = url.Replace($\"{{{param.Key}}}\", param.Value.ToString());");
+            sb.AppendLine("                }");
+            sb.AppendLine("            }");
+            sb.AppendLine("            return $\"{_baseUrl}{url}\";");
+            sb.AppendLine("        }");
+            sb.AppendLine();
             foreach (var endpoint in endpoints)
             {
                 GenerateEndpointMethod(sb, endpoint, spec);
@@ -84,7 +170,7 @@ namespace API.Core.Services.OpenAPI.Generator
             // Add request body if needed
             if (endpoint.Method.ToUpper() == "POST" || endpoint.Method.ToUpper() == "PUT" || endpoint.Method.ToUpper() == "PATCH")
             {
-                sb.AppendLine("                .Body(requestBody ?? GetConfigValue(\"requestBodies\", \"default\"))");
+                sb.AppendLine("                .Body(requestBody ?? GetDefaultRequestBody())");
             }
 
             sb.AppendLine("                .When()");
@@ -142,23 +228,23 @@ namespace API.Core.Services.OpenAPI.Generator
             {
                 if (param.Name != "X-3E-UserId" && param.Name != "X-3E-InstanceId" && param.Name != "x-3e-tenantid")
                 {
-                    var paramType = GetCSharpType(param.Schema?.Type ?? "string");
-                    parameters.Add($"{paramType} {GetParameterName(param.Name)} = null");
+                    var paramType = GetCSharpType(param.Schema?.Type ?? "string").Trim();
+                    parameters.Add($"{paramType}? {GetParameterName(param.Name)} = null");
                 }
             }
 
             // Add query parameters
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Query))
             {
-                var paramType = GetCSharpType(param.Schema?.Type ?? "string");
-                parameters.Add($"{paramType} {GetParameterName(param.Name)} = null");
+                var paramType = GetCSharpType(param.Schema?.Type ?? "string").Trim();
+                parameters.Add($"{paramType}? {GetParameterName(param.Name)} = null");
             }
 
             // Add path parameters
             foreach (var param in endpoint.Parameters.Where(p => p.In == ParameterLocation.Path))
             {
-                var paramType = GetCSharpType(param.Schema?.Type ?? "string");
-                parameters.Add($"{paramType} {GetParameterName(param.Name)} = null");
+                var paramType = GetCSharpType(param.Schema?.Type ?? "string").Trim();
+                parameters.Add($"{paramType}? {GetParameterName(param.Name)} = null");
             }
 
             return string.Join(", ", parameters);
@@ -173,11 +259,11 @@ namespace API.Core.Services.OpenAPI.Generator
         {
             return openApiType?.ToLower() switch
             {
-                "integer" => "int?",
-                "number" => "double?",
-                "boolean" => "bool?",
-                "array" => "object?",
-                _ => "string?"
+                "integer" => "int? ",
+                "number" => "double? ",
+                "boolean" => "bool? ",
+                "array" => "object? ",
+                _ => "string? "
             };
         }
 
