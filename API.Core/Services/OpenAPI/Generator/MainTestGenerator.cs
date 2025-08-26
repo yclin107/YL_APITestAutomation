@@ -131,7 +131,7 @@ namespace API.Core.Services.OpenAPI.Generator
             var parameters = GetDefaultParameters(endpoint);
             if (parameters.Any())
             {
-                sb.AppendLine($"                    {string.Join(",\n                    ", parameters)}");
+                sb.AppendLine($"                    {string.Join(",\n                    ", parameters.Select(p => $"{p}: null"))}");
             }
             
             sb.AppendLine("                );");
