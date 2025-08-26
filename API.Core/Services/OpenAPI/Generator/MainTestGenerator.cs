@@ -59,9 +59,8 @@ namespace API.Core.Services.OpenAPI.Generator
             var schemaJson = GetSchemaJsonPath(endpoint, className);
 
             sb.AppendLine($"        [Test]");
-            sb.AppendLine($"        [Category(\"Generated\")]");
+            sb.AppendLine($"        [Category(\"{endpoint.Tags.FirstOrDefault() ?? "General"}\")]");
             sb.AppendLine($"        [AllureTag(\"{endpoint.Method.ToUpper()}\")]");
-            sb.AppendLine($"        [AllureSubSuite(\"{endpoint.Tags.FirstOrDefault() ?? "General"}\")]");
             sb.AppendLine($"        public async Task {testName}()");
             sb.AppendLine("        {");
             sb.AppendLine($"            AllureApi.Step(\"Execute {endpoint.Method.ToUpper()} {endpoint.Path} - Positive Test\", async () =>");
@@ -110,9 +109,8 @@ namespace API.Core.Services.OpenAPI.Generator
             var requestBodyJson = GetRequestBodyJsonPath(endpoint, className);
 
             sb.AppendLine($"        [Test]");
-            sb.AppendLine($"        [Category(\"Generated\")]");
+            sb.AppendLine($"        [Category(\"{endpoint.Tags.FirstOrDefault() ?? "General"}\")]");
             sb.AppendLine($"        [AllureTag(\"{endpoint.Method.ToUpper()}\")]");
-            sb.AppendLine($"        [AllureSubSuite(\"{endpoint.Tags.FirstOrDefault() ?? "General"}\")]");
             sb.AppendLine($"        public async Task {testName}()");
             sb.AppendLine("        {");
             sb.AppendLine($"            AllureApi.Step(\"Execute {endpoint.Method.ToUpper()} {endpoint.Path} - Unauthorized Test\", async () =>");
@@ -159,9 +157,8 @@ namespace API.Core.Services.OpenAPI.Generator
             var endpointMethodName = GenerateEndpointMethodName(endpoint.Method, endpoint.Path);
 
             sb.AppendLine($"        [Test]");
-            sb.AppendLine($"        [Category(\"Generated\")]");
+            sb.AppendLine($"        [Category(\"{endpoint.Tags.FirstOrDefault() ?? "General"}\")]");
             sb.AppendLine($"        [AllureTag(\"{endpoint.Method.ToUpper()}\")]");
-            sb.AppendLine($"        [AllureSubSuite(\"{endpoint.Tags.FirstOrDefault() ?? "General"}\")]");
             sb.AppendLine($"        public async Task {testName}()");
             sb.AppendLine("        {");
             sb.AppendLine($"            AllureApi.Step(\"Execute {endpoint.Method.ToUpper()} {endpoint.Path} - Missing Parameters Test\", async () =>");
@@ -190,9 +187,8 @@ namespace API.Core.Services.OpenAPI.Generator
             var schemaJson = GetSchemaJsonPath(endpoint, className);
 
             sb.AppendLine($"        [Test]");
-            sb.AppendLine($"        [Category(\"Generated\")]");
+            sb.AppendLine($"        [Category(\"{endpoint.Tags.FirstOrDefault() ?? "General"}\")]");
             sb.AppendLine($"        [AllureTag(\"{endpoint.Method.ToUpper()}\")]");
-            sb.AppendLine($"        [AllureSubSuite(\"{endpoint.Tags.FirstOrDefault() ?? "General"}\")]");
             sb.AppendLine($"        public async Task {testName}()");
             sb.AppendLine("        {");
             sb.AppendLine($"            AllureApi.Step(\"Execute {endpoint.Method.ToUpper()} {endpoint.Path} - Schema Validation Test\", async () =>");
