@@ -22,7 +22,7 @@ namespace API.Core.Services.OpenAPI
         {
             try
             {
-                Console.WriteLine($"🔧 Generating modular test structure for {className}...");
+                //Console.WriteLine($"🔧 Generating modular test structure for {className}...");
                 
                 // Generate all components
                 var mainTest = _mainTestGenerator.GenerateMainTestClass(spec, endpoints, tenant, userId, className, tag);
@@ -68,7 +68,7 @@ namespace API.Core.Services.OpenAPI
                 var filePath = Path.Combine(targetPath, fileName);
                 File.WriteAllText(filePath, content);
                 
-                Console.WriteLine($"📁 Saved: {folder}/{fileName}");
+                Console.WriteLine($"Created: {folder}/{fileName}");
             }
             catch (Exception ex)
             {
