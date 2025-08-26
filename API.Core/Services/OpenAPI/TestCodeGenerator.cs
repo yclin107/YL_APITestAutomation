@@ -14,7 +14,6 @@ namespace API.Core.Services.OpenAPI
         private static readonly EndpointGenerator _endpointGenerator = new();
         private static readonly SchemaGenerator _schemaGenerator = new();
         private static readonly RequestBodyGenerator _requestBodyGenerator = new();
-        private static readonly TestMethodGenerator _testMethodGenerator = new();
         private static readonly MainTestGenerator _mainTestGenerator = new();
 
         private static readonly SchemaValidator _schemaValidator = new();

@@ -106,6 +106,8 @@ namespace API.Core.Services.OpenAPI.Generator
             }
 
             sb.AppendLine("                .Then();");
+            sb.AppendLine();
+            sb.AppendLine("            return request;");
             sb.AppendLine("        }");
             sb.AppendLine();
         }

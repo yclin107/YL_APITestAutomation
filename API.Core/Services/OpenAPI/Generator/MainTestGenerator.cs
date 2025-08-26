@@ -12,6 +12,7 @@ namespace API.Core.Services.OpenAPI.Generator
             
             sb.AppendLine("using Allure.Net.Commons;");
             sb.AppendLine("using Allure.NUnit.Attributes;");
+            sb.AppendLine("using API.TestBase.Source.Endpoints;");
             sb.AppendLine("using System.Text.Json;");
             sb.AppendLine("using static RestAssured.Dsl;");
             sb.AppendLine();
