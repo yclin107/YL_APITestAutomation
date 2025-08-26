@@ -12,10 +12,11 @@ namespace API.Core.Services.OpenAPI.Generator
             
             sb.AppendLine("using System.Text.Json;");
             sb.AppendLine("using static RestAssured.Dsl;");
+            sb.AppendLine("using API.TestBase;");
             sb.AppendLine();
             sb.AppendLine("namespace API.TestBase.Source.Endpoints");
             sb.AppendLine("{");
-            sb.AppendLine($"    public class {className}");
+            sb.AppendLine($"    public class {className} : TestBase");
             sb.AppendLine("    {");
             sb.AppendLine("        private readonly string _baseUrl;");
             sb.AppendLine("        private readonly string _token;");
